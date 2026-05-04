@@ -4,7 +4,7 @@ var topBarCenterText = "WEATHER DASHBOARD";
 var topBarCenterTextColor = "limegreen";
 
 // Grid layout desired
-var layout_cols = 4;
+var layout_cols = 3;
 var layout_rows = 3;
 
 // Menu items
@@ -154,23 +154,8 @@ var aIMG = [
     "https://www.nifc.gov/nicc-files/predictive/outlooks/month1_outlook.png"
   ],
   [
-    "GREY LINE / ISS / RS-44",
-    "https://www.timeanddate.com/scripts/sunmap.php?iso=now",
-    "https://www.heavens-above.com/orbitdisplay.aspx?icon=iss&width=600&height=300&mode=M&satid=25544",
-    "https://www.heavens-above.com/orbitdisplay.aspx?icon=default&width=600&height=300&mode=M&satid=44909"
-  ],
-  [
-    "ADS-B",
-    "iframe|https://globe.adsbexchange.com/"
-  ],
-  [
     "EARTHQUAKES 2.5+ PAST 7 DAYS",
     "iframe|https://www.cisn.org/map/"
-  ],
-  [
-    "HF PROPAGATION",
-    "https://www.hamqsl.com/solar101vhf.php",
-    "https://www.hamqsl.com/solarpich.php"
   ]
 ];
 
@@ -184,10 +169,7 @@ var tileDelay = [
   15500,
   15600,
   15700,
-  15800,
-  15900,
-  15100,
-  15200
+  15800
 ];
 
 // CUT END

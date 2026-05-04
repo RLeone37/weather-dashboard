@@ -217,16 +217,17 @@
       bottom: 0;
       left: 0;
       right: 0;
-      background: linear-gradient(transparent, rgba(4,10,18,0.92));
-      color: var(--text-mid);
+      background: linear-gradient(transparent, rgba(2,6,12,0.97) 55%);
+      color: #e8f4ff;
       font-family: var(--font-cond);
-      font-size: clamp(8px, 0.9vw, 11px);
+      font-size: clamp(9px, 1.05vw, 13px);
       font-weight: 600;
-      letter-spacing: 0.08em;
+      letter-spacing: 0.1em;
       text-transform: uppercase;
-      padding: 12px 6px 4px 6px;
+      padding: 18px 6px 5px 6px;
       text-align: center;
       pointer-events: none;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.8);
     }
 
     /* ─── FULL-SCREEN & ZOOM ───────────────────────────────────── */
@@ -856,12 +857,15 @@
     /* ── Top bar clock ── */
     function updateTopBar() {
       const now=new Date();
+      const days=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+      const month=now.getMonth()+1;
+      const day=now.getDate();
+      const year=now.getFullYear();
+      const timeStr=now.toLocaleTimeString("en-US",{hour12:false,hour:"2-digit",minute:"2-digit",second:"2-digit",timeZoneName:"short"});
       document.getElementById("topBarLeft").textContent=
-        now.toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})+" — "+
-        now.toLocaleTimeString("en-US",{hour12:false,hour:"2-digit",minute:"2-digit",second:"2-digit",timeZoneName:"short"});
+        days[now.getDay()]+" "+month+"/"+day+"/"+year+" — "+timeStr;
       document.getElementById("topBarCenter").textContent=topBarCenterText;
-      document.getElementById("topBarRight").textContent=
-        now.toISOString().slice(0,10)+" "+now.toISOString().slice(11,19)+" UTC";
+      document.getElementById("topBarRight").textContent="";
     }
     setInterval(updateTopBar,1000);
     checkForUpdates();
