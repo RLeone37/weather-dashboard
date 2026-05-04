@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Weather Dashboard" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Bebas+Neue&family=Roboto+Condensed:wght@300;400;600&display=swap" rel="stylesheet" />
+  <title>Weather Dashboard</title>
+
+  <style>
+    /* ─── RESET & BASE ─────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:           #080c10;
+      --panel-bg:     #0d1520;
+      --border:       rgba(0,200,255,0.13);
+      --border-glow:  rgba(0,200,255,0.35);
+      --accent-cyan:  #00c8ff;
+      --accent-amber: #e8a020;
+      --accent-green: #00ff88;
+      --accent-red:   #ff3b30;
+      --accent-orange:#ff6b00;
+      --text-dim:     #6a8090;
+      --text-mid:     #a0b8c8;
+      --text-bright:  #d8eef8;
+      --font-mono:    'Share Tech Mono', monospace;
+      --font-cond:    'Roboto Condensed', sans-serif;
+      --font-display: 'Bebas Neue', sans-serif;
+      --topbar-h:     36px;
+      --alerts-h:     24px;
+      --header-total: 62px; /* topbar + alerts + 2px gap */
+      --main-layout:  auto auto auto auto;
+      --main-width:   24.9vw;
+      --main-height:  31vh;
+      --tile-gap:     2px;
+    }
+
+    html, body {
+      background: var(--bg);
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+      font-family: var(--font-mono);
+      color: var(--text-bright);
+    }
+
+    /* ─── SCANLINE OVERLAY ─────────────────────────────────────── */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 9999;
+      background: repeating-linear-gradient(
+        to bottom,
+        transparent 0px,
+        transparent 3px,
+        rgba(0,0,0,0.07) 3px,
+        rgba(0,0,0,0.07) 4px
+      );
+    }
+
+    /* ─── TOP BAR ──────────────────────────────────────────────── */
+    .top-bar {
+      display: grid;
+      grid-template-columns: 2fr 1fr 2fr;
+      height: var(--topbar-h);
+      background: linear-gradient(180deg, #0f1e2e 0%, #091522 100%);
+      border-bottom: 1px solid var(--border-glow);
+      padding: 0 6px;
+      gap: 4px;
+      position: relative;
+      z-index: 10;
+      /* subtle inner glow on bottom edge */
+      box-shadow: 0 2px 12px rgba(0,200,255,0.08);
+    }
+
+    .top-bar::before {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent-cyan), var(--accent-amber), var(--accent-cyan), transparent);
+      opacity: 0.6;
+    }
+
+    .child {
+      display: flex;
+      align-items: center;
+      font-family: var(--font-mono);
+      font-size: clamp(10px, 1.3vw, 14px);
+      letter-spacing: 0.04em;
+      background: transparent;
+      border: none;
+      padding: 0 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    #topBarLeft  { color: #c8d8e8; justify-content: flex-start; }
+    #topBarCenter {
+      color: var(--accent-green);
+      justify-content: center;
+      font-family: var(--font-display);
+      font-size: clamp(14px, 1.8vw, 20px);
+      letter-spacing: 0.12em;
+      text-shadow: 0 0 12px rgba(0,255,136,0.5), 0 0 30px rgba(0,255,136,0.2);
+    }
+    #topBarRight { color: var(--accent-cyan); justify-content: flex-end; opacity: 0.85; }
+
+    /* ─── ALERTS TICKER ────────────────────────────────────────── */
+    .alert-ticker {
+      position: relative;
+      width: 100%;
+      height: var(--alerts-h);
+      background: #040a10;
+      overflow: hidden;
+      white-space: nowrap;
+      border-bottom: 1px solid rgba(0,200,255,0.2);
+      display: flex;
+      align-items: center;
+    }
+
+    /* Left label "● ALERTS" */
+    .alert-ticker::before {
+      content: '● ALERTS';
+      position: absolute;
+      left: 0;
+      z-index: 2;
+      background: #040a10;
+      padding: 0 8px 0 6px;
+      font-family: var(--font-mono);
+      font-size: 1.1vh;
+      color: var(--accent-amber);
+      letter-spacing: 0.1em;
+      border-right: 1px solid rgba(0,200,255,0.2);
+      height: 100%;
+      display: flex;
+      align-items: center;
+    }
+
+    .alert-ticker-content {
+      display: inline-block;
+      padding-left: 120px; /* leave room for label */
+      animation: ticker var(--alerts-duration, 60s) linear infinite;
+      font-family: var(--font-mono);
+      font-size: 1.15vh;
+      font-weight: bold;
+      line-height: var(--alerts-h);
+    }
+    .alert-ticker-content a { text-decoration: none; color: var(--text-bright); }
+
+    /* ─── DASHBOARD GRID ───────────────────────────────────────── */
+    .default-frame {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .dashboard {
+      display: grid;
+      grid-template-columns: var(--main-layout);
+      gap: var(--tile-gap);
+      flex: 1;
+      overflow: hidden;
+      background: #050d14; /* gap color */
+      padding: var(--tile-gap);
+    }
+
+    /* ─── TILE ─────────────────────────────────────────────────── */
+    .image-container {
+      position: relative;
+      height: var(--main-height);
+      width: var(--main-width);
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      transition: border-color 0.2s;
+    }
+
+    .image-container:hover {
+      border-color: var(--border-glow);
+      box-shadow: inset 0 0 0 1px rgba(0,200,255,0.08), 0 0 8px rgba(0,200,255,0.08);
+    }
+
+    .image-container img {
+      height: 100%;
+      width: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .iframe-tile {
+      position: absolute;
+      inset: 0;
+      border: none;
+      width: 100%;
+      height: 100%;
+      border-radius: 3px;
+    }
+
+    /* ─── TILE TITLE ───────────────────────────────────────────── */
+    .image-title {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(transparent, rgba(4,10,18,0.92));
+      color: var(--text-mid);
+      font-family: var(--font-cond);
+      font-size: clamp(8px, 0.9vw, 11px);
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 12px 6px 4px 6px;
+      text-align: center;
+      pointer-events: none;
+    }
+
+    /* ─── FULL-SCREEN & ZOOM ───────────────────────────────────── */
+    .iframe-container {
+      background: var(--bg);
+      border: none;
+      position: fixed;
+      inset: 0;
+      z-index: -2;
+    }
+
+    .full-screen {
+      background: var(--bg);
+      border: none;
+      height: 100%;
+      width: 98%;
+      margin-left: 1%;
+    }
+
+    .img-zoom {
+      background: var(--bg);
+      left: 0;
+      border: none;
+      height: 100%;
+      width: 100%;
+      position: fixed;
+      overflow: hidden;
+      bottom: 0;
+      z-index: -2;
+      display: none;
+    }
+
+    .image-large {
+      display: block;
+      margin: auto;
+      max-height: 100%;
+      max-width: 100%;
+      height: 100%;
+      width: auto;
+    }
+
+    .media {
+      height: 100%;
+      width: 100%;
+      cursor: pointer;
+    }
+
+    .hidden { display: none !important; }
+
+    /* ─── SIDE MENUS ───────────────────────────────────────────── */
+    .menu {
+      display: grid;
+      grid-gap: 3px;
+      position: absolute;
+      height: auto;
+      width: auto;
+      margin-top: 10vh;
+      left: -5.5vw;
+      z-index: 20;
+      transition: 0.25s ease;
+    }
+
+    .menuR {
+      display: grid;
+      grid-gap: 3px;
+      position: absolute;
+      height: auto;
+      width: 28px;
+      margin-top: 10vh;
+      right: -5px;
+      z-index: 20;
+      transition: 0.25s ease;
+    }
+
+    #myMenu:hover  { width: 7vw; left: 0; }
+    #myMenuR:hover { width: 7vw; right: 0; }
+
+    #mySidenav a, #mySidenavR a {
+      display: block;
+      transition: 0.25s ease;
+      padding: 10px 14px;
+      text-decoration: none;
+      font-family: var(--font-display);
+      font-size: clamp(10px, 1.2vw, 14px);
+      letter-spacing: 0.08em;
+      color: white;
+      box-shadow: 3px 3px 10px rgba(0,0,0,0.6);
+    }
+
+    #mySidenav a {
+      position: relative;
+      float: inline-start;
+      left: calc(-0.2vw - 10px);
+      width: 5vw;
+      text-align: right;
+      border-radius: 0 4px 4px 0;
+    }
+    #mySidenav a:hover { left: 0; }
+
+    #mySidenavR a {
+      position: relative;
+      float: inline-start;
+      right: calc(-0.2vw - 10px);
+      width: 7vw;
+      text-align: left;
+      border-radius: 4px 0 0 4px;
+    }
+    #mySidenavR a:hover { right: 0; width: 7vw; }
+
+    /* ─── OVERLAY / SOURCES ────────────────────────────────────── */
+    .overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      color: var(--text-bright);
+      padding: 40px;
+      z-index: 30;
+      font-family: var(--font-cond);
+    }
+
+    .overlay-content {
+      background: var(--panel-bg);
+      border: 1px solid var(--border-glow);
+      border-radius: 6px;
+      padding: 20px;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    .close-btn {
+      cursor: pointer;
+      color: white;
+      float: right;
+      font-size: 20px;
+    }
+
+    /* ─── SETTINGS PAGE ────────────────────────────────────────── */
+    .settings-Page {
+      display: none;
+      font-family: Arial, sans-serif;
+      margin-top: 37px;
+      background-color: #f0f4f8;
+      height: 98%;
+      width: 98%;
+      margin-left: 1%;
+      overflow-y: auto;
+    }
+
+    .fixed-section {
+      display: none;
+      text-align: center;
+      position: fixed;
+      top: 0;
+      left: 1%;
+      width: 98%;
+      background-color: cadetblue;
+      padding-top: 7px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      z-index: -3;
+    }
+
+    .section { margin-bottom: 20px; display: flex; flex-wrap: wrap; }
+    label { margin: 2px; font-weight: bold; }
+    input[type="text"]   { width: 90%; padding: 1px; margin-right: 5px; margin-bottom: 3px; }
+    input[type="number"] { width: 20%; padding: 1px; margin-bottom: 10px; }
+
+    table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+    table th, table td { border: 1px solid #ddd; padding: 8px; }
+    table th { background-color: #f4f4f4; }
+
+    button {
+      padding: 0 11px;
+      margin: 0 0 7px 0;
+      cursor: pointer;
+      background-image: linear-gradient(#f7f8fa, #e7e9ec);
+      border: 1px solid #adb1b8;
+      border-radius: 3px;
+      color: #0f1111;
+      font-size: 13px;
+      height: 23px;
+      white-space: nowrap;
+    }
+    button:hover  { border-color: #a2a6ac; }
+    button:focus  { border-color: #e77600; box-shadow: rgba(228,121,17,0.5) 0 0 3px 2px; outline: 0; }
+
+    .radio-group { display: flex; align-items: center; }
+    .radio-group label { margin-right: 15px; padding-top: 5px; font-weight: normal; }
+
+    /* ─── RSS TICKER (bottom) ──────────────────────────────────── */
+    .rss-ticker {
+      position: fixed;
+      bottom: 0;
+      width: 100%;
+      background: rgba(4,10,18,0.88);
+      border-top: 1px solid var(--border);
+      overflow: hidden;
+      white-space: nowrap;
+      padding: 3px 0;
+      font-family: var(--font-mono);
+      font-size: 1.3vh;
+      font-weight: bold;
+      z-index: 15;
+    }
+
+    .rss-ticker-content {
+      display: inline-block;
+      padding-left: 100%;
+      animation: ticker var(--ticker-duration, 90s) linear infinite;
+    }
+
+    .rss-ticker-content a { text-decoration: none; color: var(--accent-amber); }
+
+    /* ─── TICKER KEYFRAME ──────────────────────────────────────── */
+    @keyframes ticker {
+      0%   { transform: translateX(0); }
+      100% { transform: translateX(-100%); }
+    }
+  </style>
+
+  <script src="wheelzoom.js"></script>
+  <script>
+    window.addEventListener('DOMContentLoaded', () => console.log('DOMContentLoaded'));
+    window.addEventListener('load', () => console.log('Page fully loaded'));
+
+    /* ── Settings section (unchanged logic) ── */
+    function getColumnHeaderTitle(tableId, columnNumber) {
+      const table = document.getElementById(tableId);
+      if (!table) return null;
+      const headers = table.querySelectorAll("thead th");
+      if (columnNumber < 0 || columnNumber >= headers.length) return null;
+      return headers[columnNumber].textContent;
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      const defaults = {
+        settingsSource: "localStorage",
+        topBarCenterText: "WEATHER DASHBOARD",
+        layout_cols: 4, layout_rows: 3,
+        aURL: [["2196F3","Photos","https://picsum.photos/",1,"L"]],
+        aImages: Array.from({length:12},(_,i)=>[`Tile ${i+1}`,["https://picsum.photos/seed/picsum/200/300"],30000]),
+        aRSS: [["https://www.amsat.org/feed/",60],["https://daily.hamweekly.com/atom.xml",60]],
+      };
+
+      settings = JSON.parse(localStorage.getItem("hamdash_config")) || {...defaults};
+      if (settings.settingsSource)
+        document.querySelector(`input[name="settingsSource"][value="${settings.settingsSource}"]`).checked = true;
+
+      adjustDashboardItems = () => {
+        const total = settings.layout_cols * settings.layout_rows;
+        const cur   = settings.aImages.length;
+        if (cur < total) for (let i=cur;i<total;i++) settings.aImages.push(["",[""],5000]);
+        else if (cur > total) settings.aImages.splice(total);
+        updateTable("dashboardTable", settings.aImages, ["Tile Title","Tile URLs","URL Rotation Interval (ms)"]);
+      };
+
+      updateMenuTable = () => updateTable("menuTable", settings.aURL, ["Color","Text","URL","Scale","Side"]);
+      updateFeedTable = () => updateTable("feedTable", settings.aRSS, ["Feed URL","Refresh Interval (minutes)"]);
+
+      const updateTable = (tableId, data, columns) => {
+        const tbody = document.querySelector(`#${tableId} tbody`);
+        tbody.innerHTML = "";
+        data.forEach((item, index) => {
+          const row = document.createElement("tr");
+          columns.forEach((col, colIndex) => {
+            const cell = document.createElement("td");
+            if (tableId=="menuTable" && colIndex==0) {
+              const c = document.createElement("input"); c.type="color";
+              c.value="#"+item[colIndex].replace("#","");
+              c.onchange = e => (item[colIndex]=e.target.value);
+              cell.appendChild(c);
+            } else if (Array.isArray(item[colIndex])) {
+              const container = document.createElement("div");
+              item[colIndex].forEach((url, urlIndex) => {
+                const t = document.createElement("input"); t.type="text"; t.value=url;
+                t.onchange = e => (item[colIndex][urlIndex]=e.target.value);
+                container.appendChild(t);
+                const rb = document.createElement("button"); rb.textContent="Remove URL";
+                rb.onclick = () => { item[colIndex].splice(urlIndex,1); updateTable(tableId,data,columns); };
+                container.appendChild(document.createElement("br")); container.appendChild(rb); container.appendChild(document.createElement("br"));
+              });
+              const ab = document.createElement("button"); ab.textContent="Add URL";
+              ab.onclick = () => { item[colIndex].push(""); updateTable(tableId,data,columns); };
+              container.appendChild(ab); cell.appendChild(container);
+            } else {
+              const input = document.createElement("input");
+              input.type = (getColumnHeaderTitle(tableId,colIndex)==="Scale"||getColumnHeaderTitle(tableId,colIndex)==="URL Rotation Interval (ms)") ? "number" : "text";
+              input.value = item[colIndex];
+              input.onchange = e => (item[colIndex] = colIndex===2 ? parseInt(e.target.value,10) : e.target.value);
+              cell.appendChild(input);
+            }
+            row.appendChild(cell);
+          });
+          const ac = document.createElement("td");
+          const db = document.createElement("button"); db.textContent="Delete";
+          db.onclick = () => { data.splice(index,1); updateTable(tableId,data,columns); adjustDashboardItems(); };
+          ac.appendChild(db); row.appendChild(ac); tbody.appendChild(row);
+        });
+      };
+
+      document.getElementById("CenterText").value   = settings.topBarCenterText;
+      document.getElementById("layout_cols").value  = settings.layout_cols;
+      document.getElementById("layout_rows").value  = settings.layout_rows;
+      updateMenuTable(); updateFeedTable(); adjustDashboardItems();
+
+      document.getElementById("saveConfig").onclick = () => {
+        settings.settingsSource     = document.querySelector('input[name="settingsSource"]:checked').value;
+        settings.topBarCenterText   = document.getElementById("CenterText").value;
+        settings.layout_cols        = parseInt(document.getElementById("layout_cols").value,10);
+        settings.layout_rows        = parseInt(document.getElementById("layout_rows").value,10);
+        const mr = document.querySelectorAll("#menuTable tbody tr");
+        settings.aURL = Array.from(mr).map(r=>{ const c=r.querySelectorAll("td"); return [c[0].querySelector("input").value,c[1].querySelector("input").value,c[2].querySelector("input").value,parseInt(c[3].querySelector("input").value,10),c[4].querySelector("input").value]; });
+        const fr = document.querySelectorAll("#feedTable tbody tr");
+        settings.aRSS = Array.from(fr).map(r=>{ const c=r.querySelectorAll("td"); return [c[0].querySelector("input").value,parseInt(c[1].querySelector("input").value,10)]; });
+        localStorage.setItem("hamdash_config",JSON.stringify(settings));
+        alert("Settings saved!");
+        updateInputs(); updateMenuTable(); updateFeedTable(); adjustDashboardItems();
+      };
+
+      document.getElementById("resetConfig").onclick = () => {
+        localStorage.setItem("hamdash_config",JSON.stringify(defaults)); alert("Reset to defaults!");
+        settings=defaults; updateInputs(); updateMenuTable(); updateFeedTable(); adjustDashboardItems();
+      };
+      document.getElementById("deleteConfig").onclick = () => {
+        window.localStorage.removeItem('hamdash_config'); alert("Deleted!");
+        updateInputs(); updateMenuTable(); updateFeedTable(); adjustDashboardItems();
+      };
+      document.getElementById("backupConfig").onclick = () => {
+        const a=document.createElement("a"); a.href="data:text/json;charset=utf-8,"+encodeURIComponent(JSON.stringify(settings));
+        a.download="hamdash_config_backup.json"; document.body.appendChild(a); a.click(); a.remove();
+      };
+      document.getElementById("restoreConfig").onclick = () => {
+        const input=document.createElement("input"); input.type="file"; input.accept="application/json";
+        input.onchange=e=>{ const r=new FileReader(); r.onload=ev=>{ settings=JSON.parse(ev.target.result); alert("Restored!"); updateInputs(); updateMenuTable(); updateFeedTable(); adjustDashboardItems(); }; r.readAsText(e.target.files[0]); };
+        input.click();
+      };
+      document.getElementById("importConfig").onclick = () => {
+        const input=document.createElement("input"); input.type="file"; input.accept=".js";
+        input.onchange=e=>{ const r=new FileReader(); r.onload=ev=>{
+          const cfg=eval(`(function(){${ev.target.result}return{topBarCenterText,layout_cols,layout_rows,aURL,aIMG,aRSS,tileDelay};})()`);
+          const filteredAURL=cfg.aURL.filter(item=>!item.some(s=>typeof s==="string"&&["BACK","Back","Refresh","Sources","Update","Help"].some(k=>s.includes(k))));
+          settings={topBarCenterText:cfg.topBarCenterText,layout_cols:cfg.layout_cols,layout_rows:cfg.layout_rows,aURL:filteredAURL,aImages:cfg.aIMG.map((item,i)=>{const[first,...rest]=item;return[first,rest,cfg.tileDelay[i]];}),aRSS:cfg.aRSS,settingsSource:"localStorage"};
+          alert("Imported!"); updateInputs(); updateMenuTable(); updateFeedTable(); adjustDashboardItems();
+        }; r.readAsText(e.target.files[0]); };
+        input.click();
+      };
+      document.getElementById("exportConfig").onclick = () => {
+        const content=`// CUT START\nvar disableSetup = false;\nvar topBarCenterText = "${settings.topBarCenterText}";\nvar layout_cols = ${settings.layout_cols};\nvar layout_rows = ${settings.layout_rows};\nvar aURL = ${JSON.stringify(settings.aURL,null,2)};\nvar aRSS = ${JSON.stringify(settings.aRSS,null,2)};\nvar aIMG = ${JSON.stringify(settings.aImages.map(item=>[item[0],...item[1].flat()]),null,2)};\nvar tileDelay = ${JSON.stringify(settings.aImages.map(item=>item[2]),null,2)};\n// CUT END`;
+        const a=document.createElement("a"); a.href="data:text/javascript;charset=utf-8,"+encodeURIComponent(content);
+        a.download="config.js"; document.body.appendChild(a); a.click(); a.remove();
+      };
+      document.getElementById("addMenuItem").onclick  = () => { settings.aURL.push(["","","","",""]); updateMenuTable(); };
+      document.getElementById("addFeedItem").onclick  = () => { settings.aRSS.push([""]); updateFeedTable(); };
+      document.getElementById("layout_cols").addEventListener("change",()=>{ settings.layout_cols=parseInt(document.getElementById("layout_cols").value,10); adjustDashboardItems(); });
+      document.getElementById("layout_rows").addEventListener("change",()=>{ settings.layout_rows=parseInt(document.getElementById("layout_rows").value,10); adjustDashboardItems(); });
+
+      function updateInputs() {
+        if(settings.settingsSource) document.querySelector(`input[name="settingsSource"][value="${settings.settingsSource}"]`).checked=true;
+        document.getElementById("CenterText").value  = settings.topBarCenterText;
+        document.getElementById("layout_cols").value = settings.layout_cols;
+        document.getElementById("layout_rows").value = settings.layout_rows;
+      }
+      function updateValue() {
+        topBarCenterText=document.getElementById('CenterText').value;
+        document.getElementById('topBarCenter').textContent=topBarCenterText;
+      }
+      document.getElementById('CenterText').onblur   = updateValue;
+      document.getElementById('layout_cols').onblur  = updateValue;
+      document.getElementById('layout_rows').onblur  = updateValue;
+    });
+
+    /* ── Utility section (unchanged logic) ── */
+    function minimalConfiguration() {
+      window.disableSetup=false; window.curSettingsSrc="None";
+      window.topBarCenterText="Use 'Setup' to configure your Weather Dashboard"; window.layout_cols=0; window.layout_rows=0;
+      window.aURL=[]; window.aIMG=[]; window.aRSS=[]; window.tileDelay=[]; start();
+    }
+
+    async function checkIfFileExists(url) {
+      try { const r=await fetch(url,{method:"HEAD",mode:"no-cors"}); return r.ok; } catch(e) { return false; }
+    }
+    async function loadScriptIfExists(url) {
+      const exists=await checkIfFileExists(url);
+      if(exists) return new Promise((res,rej)=>{ const s=document.createElement("script"); s.src=url; s.onload=res; s.onerror=rej; document.head.appendChild(s); });
+      else { minimalConfiguration(); return Promise.reject("File does not exist"); }
+    }
+    async function loadConfig() {
+      if(window.location.protocol==='file:') {
+        const s=document.createElement('script'); s.src='config.js';
+        s.onload=()=>{ window.curSettingsSrc="config.js from file system"; start(); };
+        s.onerror=()=>minimalConfiguration();
+        document.head.appendChild(s);
+      } else {
+        await loadScriptIfExists('config.js');
+        window.curSettingsSrc="config.js from server"; start();
+      }
+    }
+    async function main() {
+      try {
+        const stored=localStorage.getItem('hamdash_config');
+        if(stored) {
+          const p=JSON.parse(stored);
+          window.settingsSource=p.settingsSource;
+          if(settingsSource==='localStorage') {
+            window.disableSetup=p.disableSetup; window.topBarCenterText=p.topBarCenterText;
+            window.layout_cols=p.layout_cols; window.layout_rows=p.layout_rows;
+            window.aURL=p.aURL; window.aRSS=p.aRSS; window.aIMG=p.aImages;
+            window.tileDelay=[];
+            aIMG.forEach(sub=>{ tileDelay.push(sub.pop()); });
+            aIMG.forEach(sub=>{ if(Array.isArray(sub[1])) sub[1]=sub[1].map(e=>`${e}`).join(','); const ne=sub[1].split(','); sub.splice(1,1,...ne); });
+            window.curSettingsSrc="Browser Local Storage"; start();
+          } else loadConfig();
+        } else loadConfig();
+      } catch(e) { console.error('Config load failed:',e); }
+    }
+
+    var help="Double click on an image to expand to full screen.\nDouble click again to close full screen view.\nRight click on an image to display the next one.\nImages rotate automatically by default.\n";
+    const currentVersion="v2025.04.02";
+    async function getLatestVersion() {
+      try { const r=await fetch("https://api.github.com/repos/VA3HDL/hamdashboard/releases/latest"); const d=await r.json(); return d.tag_name; } catch(e) { return currentVersion; }
+    }
+    bUpdate=false;
+    async function checkForUpdates() {
+      const latest=await getLatestVersion();
+      if(currentVersion!==latest) bUpdate=true;
+    }
+
+    const videoExtensions=[".mp4",".webm",".ogg",".ogv"];
+    function isVideo(src) { return videoExtensions.some(e=>src.includes(e)); }
+    function getVideoType(src) { if(src.includes(".mp4")) return "video/mp4"; if(src.includes(".webm")) return "video/webm"; return "video/ogg"; }
+    function isFrame(src) { return src.includes("iframe|"); }
+    function formatArray(arr) { return arr.map(a=>a.map(i=>typeof i==="string"?`"${i}"`:i).join(", ")).join("<br>"); }
+
+    function setRot() {
+      if(typeof tileDelay==="undefined") { aInt[0]=setInterval(()=>slide(),30000); }
+      else { tileDelay.forEach((t,i)=>{ if(t>0) aInt[i]=setInterval(()=>slide(i),t); }); }
+    }
+    function rotStop() {
+      if(typeof tileDelay==="undefined") clearTimeout(aInt[0]);
+      else tileDelay.forEach((_,i)=>clearTimeout(aInt[i]));
+    }
+
+    function MenuOpt(num) {
+      window.stop(); rotStop();
+      const opt=aURL[num][1].toLowerCase();
+      if(opt==="refresh") { location.reload(); setRot(); }
+      else if(opt==="help") { alert(help); }
+      else if(opt==="setup") {
+        document.getElementById("FullScreen").style.display="none";
+        document.getElementById("fixedSection").style.display="block";
+        document.getElementById("settingsPage").style.display="block";
+        document.getElementById("iFrameContainer").style.zIndex=1;
+        document.getElementById("iFrameContainer").style.backgroundColor="#080c10";
+        window.settings.topBarCenterText=topBarCenterText;
+        window.settings.layout_cols=window.layout_cols; window.settings.layout_rows=window.layout_rows;
+        document.getElementById("CenterText").value=window.settings.topBarCenterText;
+        document.getElementById("layout_cols").value=window.settings.layout_cols;
+        document.getElementById("layout_rows").value=window.settings.layout_rows;
+        const filtered=aURL.filter(item=>!item.some(s=>typeof s==="string"&&["BACK","Back","Refresh","Setup","Sources","Update","Help"].some(k=>s.includes(k))));
+        window.settings.aURL=filtered;
+        window.settings.aImages=aIMG.map((item,i)=>{ const[first,...rest]=item; return[first,rest,tileDelay[i]]; });
+        window.settings.aRSS=aRSS;
+        updateMenuTable(); updateFeedTable(); adjustDashboardItems();
+      } else if(opt==="sources") {
+        document.getElementById("array1").innerHTML="<br>"+formatArray(aURL)+"<br><br>";
+        document.getElementById("array2").innerHTML="<br>"+formatArray(aIMG)+"<br><br>";
+        document.getElementById("array3").innerHTML="<br>"+formatArray(aRSS)+"<br><br>";
+        document.getElementById("array4").innerHTML=`<br>Copyright (c) 2025 Pablo Sabbag, VA3HDL | MIT License<br><br>Dashboard codebase version: ${currentVersion}<br><br>`;
+        document.getElementById("overlay").style.display="block";
+      } else if(opt==="update") {
+        window.open("https://github.com/VA3HDL/hamdashboard/releases/","_blank").focus();
+      } else if(opt==="back") {
+        document.getElementById("FullScreen").src="about:blank";
+        document.getElementById("iFrameContainer").style.zIndex=-2;
+        document.getElementById("iFrameContainer").style.backgroundColor="var(--bg)";
+        document.getElementById("FullScreen").style.display="none";
+        document.getElementById("settingsPage").style.display="none";
+        setRot();
+      } else {
+        document.getElementById("iFrameContainer").style.zIndex=1;
+        document.getElementById("FullScreen").style.display="block";
+        document.getElementById("FullScreen").src=aURL[num][2];
+        document.getElementById("FullScreen").style.transform="scale("+aURL[num][3]+")";
+      }
+    }
+
+    function hideOverlay() { document.getElementById("overlay").style.display="none"; }
+
+    function larger(event) {
+      const t=event.target||event.srcElement;
+      if(largeShow===1) { setRot(); largeShow=0; document.getElementById("imgZoom").style.display="none"; document.getElementById("imgZoom").style.zIndex=-2; }
+      else { window.stop(); rotStop(); largeShow=1; largeIdx=+t.id.match(/\d+/)[0]; document.getElementById("imgZoom").style.display="block"; document.getElementById("imgZoom").style.zIndex=3; document.getElementById("ImageLarge").src=t.style.backgroundImage.replace(/^url\(["']?/,"").replace(/["']?\)$/,""); }
+    }
+
+    function getImgURL(url) { return url.includes("?") ? url : url+"?_="+Date.now(); }
+
+    function rotate(event) {
+      event.preventDefault();
+      const t=event.target||event.srcElement;
+      let i=largeShow===1 ? largeIdx : +t.id.match(/\d+/)[0];
+      if(aIMG[i].length>2) { ++aIdx[i]; if(aIdx[i]>aIMG[i].length-1) aIdx[i]=1; if(!isVideo(aIMG[i][aIdx[i]])&&!isFrame(aIMG[i][aIdx[i]])) document.getElementById(t.id).src=getImgURL(aIMG[i][aIdx[i]]); }
+    }
+
+    function imgRot(i) {
+      if(aIMG[i].length>2) { ++aIdx[i]; if(aIdx[i]>aIMG[i].length-1) aIdx[i]=1; }
+      const vid=document.getElementById("Video"+i), img=document.getElementById("Image"+i), ifr=document.getElementById("iFrame"+i);
+      if(isVideo(aIMG[i][aIdx[i]])) { vid.src=getImgURL(aIMG[i][aIdx[i]]); vid.classList.remove("hidden"); img.classList.add("hidden"); ifr.classList.add("hidden"); }
+      else if(isFrame(aIMG[i][aIdx[i]])) { const ns=aIMG[i][aIdx[i]].split("|"); ifr.classList.remove("hidden"); ifr.src=ns[1]; if(ns[2]) ifr.style.transform="scale("+ns[2]+")"; ifr.style.zIndex=0; vid.classList.add("hidden"); img.classList.add("hidden"); }
+      else { img.src=getImgURL(aIMG[i][aIdx[i]]); img.classList.remove("hidden"); vid.classList.add("hidden"); ifr.classList.add("hidden"); }
+    }
+
+    function slide(i) {
+      if(typeof i==="undefined") aIMG.forEach((_,idx)=>imgRot(idx));
+      else imgRot(i);
+    }
+
+    function updateTickerSpeed() {
+      const el=document.querySelector(".rss-ticker-content");
+      if(!el) return;
+      const dur=(el.scrollWidth+el.parentElement.offsetWidth)/150;
+      el.style.setProperty("--ticker-duration",`${dur}s`);
+    }
+
+    function fetchAndDisplayRss() {
+      const proxy="https://corsproxy.io/";
+      const el=document.getElementById("rss-ticker-content");
+      const chunks=new Array(aRSS.length).fill("");
+      aRSS.forEach(([url,interval],index)=>{
+        const fetch1=()=>{
+          fetch(proxy+"?url="+encodeURIComponent(url)).then(r=>r.text()).then(txt=>{
+            const xml=new DOMParser().parseFromString(txt,"text/xml");
+            const tag=xml.querySelector("entry")?"entry":"item";
+            const feedTitle=xml.querySelector("channel > title, feed > title")?.textContent||"Feed";
+            let out=`<span style="color:#6a8090;font-size:0.9em;"> ${feedTitle} </span> — `;
+            xml.querySelectorAll(tag).forEach(item=>{
+              const title=item.querySelector("title").textContent;
+              const lEl=item.querySelector("link");
+              const link=lEl?(lEl.getAttribute("href")||lEl.textContent):"#";
+              out+=`<a href="${link}" target="_blank" style="margin-right:40px;">${title}</a>`;
+            });
+            chunks[index]=out; el.innerHTML=chunks.join(""); updateTickerSpeed();
+          }).catch(()=>{});
+        };
+        fetch1(); setInterval(fetch1,interval*60*1000);
+      });
+    }
+
+    function start() {
+      const lc=typeof window.layout_cols==="undefined"?4:window.layout_cols;
+      const lr=typeof window.layout_rows==="undefined"?3:window.layout_rows;
+      document.documentElement.style.setProperty("--main-layout","auto ".repeat(lc).trim());
+      document.documentElement.style.setProperty("--main-width",(99.6/lc)+"vw");
+
+      /* Height calc: subtract header (topbar + alerts + gaps) */
+      const hdrPx = 62; /* ~36px topbar + 24px alerts + 2px */
+      document.documentElement.style.setProperty("--main-height",`calc((100vh - ${hdrPx}px - ${(lr+1)*2}px) / ${lr})`);
+
+      document.getElementById("currentSettingsSource").innerHTML=curSettingsSrc;
+      window.largeShow=0; window.aIdx=[]; window.aInt=[];
+      const iTiles=lc*lr;
+      for(let i=0;i<iTiles;i++) { aIdx.push(1); aInt.push(null); }
+
+      if(!(aIMG.length===tileDelay.length&&aIMG.length===iTiles)) {
+        alert(`Config error! aIMG:${aIMG.length}, tileDelay:${tileDelay.length}, expected:${iTiles}`);
+      }
+
+      const parentDiv=document.getElementById("myMenu");
+      const parentDivR=document.getElementById("myMenuR");
+
+      aURL.unshift(
+        ["add10d","BACK","","1","L"],["add10d","BACK","","1","R"],
+        ["ff9100","Refresh","?_="+Date.now(),"1"],["0dd1a7","Help","#","1","L"]
+      );
+      if(typeof disableSetup==="undefined"||!disableSetup) aURL.push(["ff9100","Setup","#","1","R"]);
+      aURL.push(["0dd1a7","Sources","#","1","R"]);
+      if(bUpdate) aURL.push(["FF0000","Update","#","1","R"]);
+
+      aURL.forEach((arr,index)=>{
+        const d=document.createElement("div");
+        const col=arr[0].replace("#","");
+        d.innerHTML=`<a href="#" style="background-color:#${col};" onclick="MenuOpt(${index})">${arr[1]}</a>`;
+        if(arr[4]==="R") { d.id="mySidenavR"; d.className="sidenavR"; parentDivR.appendChild(d); }
+        else             { d.id="mySidenav";  d.className="sidenav";  parentDiv.appendChild(d); }
+      });
+
+      const dash=document.getElementById("dash");
+      aIMG.forEach((arr,index)=>{
+        const wrap=document.createElement("div");
+        wrap.className="image-container"; wrap.id=`box${index}`;
+
+        const vid=document.createElement("video"); vid.id=`Video${index}`; vid.classList.add("media","hidden");
+        vid.controls=true; vid.muted=true; vid.autoplay=true; vid.loop=true;
+        const src=document.createElement("source"); vid.appendChild(src);
+
+        const img=document.createElement("img"); img.id=`Image${index}`; img.classList.add("hidden");
+        img.oncontextmenu=rotate; img.ondblclick=larger;
+
+        const ifr=document.createElement("iframe"); ifr.className="iframe-tile"; ifr.id=`iFrame${index}`; ifr.classList.add("hidden");
+
+        if(isVideo(arr[1])) { vid.classList.remove("hidden"); src.src=arr[1]; src.type=getVideoType(arr[1]); }
+        else if(isFrame(arr[1])) { ifr.classList.remove("hidden"); const ns=arr[1].split("|"); ifr.src=ns[1]; if(ns[2]) ifr.style.transform="scale("+ns[2]+")"; ifr.style.zIndex=0; }
+        else {
+          img.classList.remove("hidden"); img.src=getImgURL(arr[1]);
+          img.onerror=function(){ const txt="Failed to load image"; if(this.src.includes("?")) { this.src=this.src.split("?")[0]; } else { this.src="data:image/svg+xml;base64,"+window.btoa(`<svg xmlns="http://www.w3.org/2000/svg" width="480" height="330"><text style="font-size:28px;fill:#e8a020;" x="80" y="165">${txt}</text></svg>`); } };
+        }
+
+        wrap.appendChild(vid); wrap.appendChild(img); wrap.appendChild(ifr);
+        if(arr[0].length>0) { const ttl=document.createElement("div"); ttl.className="image-title"; ttl.innerHTML=arr[0]; wrap.appendChild(ttl); }
+        dash.appendChild(wrap);
+      });
+
+      wheelzoom(document.querySelectorAll("img"));
+      window.addEventListener("resize",()=>window.location.reload());
+
+      if(typeof aRSS!=="undefined"&&aRSS.length>0) {
+        const ticker=document.createElement("div"); ticker.id="rss-ticker"; ticker.className="rss-ticker";
+        const content=document.createElement("div"); content.id="rss-ticker-content"; content.className="rss-ticker-content";
+        ticker.appendChild(content); document.body.appendChild(ticker);
+        fetchAndDisplayRss();
+        content.addEventListener("mouseenter",()=>content.style.animationPlayState="paused");
+        content.addEventListener("mouseleave",()=>content.style.animationPlayState="running");
+      }
+
+      setRot();
+    }
+
+    /* ── Top bar clock ── */
+    function updateTopBar() {
+      const now=new Date();
+      document.getElementById("topBarLeft").textContent=
+        now.toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})+" — "+
+        now.toLocaleTimeString("en-US",{hour12:false,hour:"2-digit",minute:"2-digit",second:"2-digit",timeZoneName:"short"});
+      document.getElementById("topBarCenter").textContent=topBarCenterText;
+      document.getElementById("topBarRight").textContent=
+        now.toISOString().slice(0,10)+" "+now.toISOString().slice(11,19)+" UTC";
+    }
+    setInterval(updateTopBar,1000);
+    checkForUpdates();
+  </script>
+
+  <!-- ── Alerts Ticker ── -->
+  <style>
+    /* badge colours */
+    .badge-tornado  { color: #ff3b30; }
+    .badge-severe   { color: #ffa500; }
+    .badge-hurricane{ color: #ff3b30; }
+    .alert-sep { color: #334455; margin: 0 6px; }
+  </style>
+</head>
+
+<body onload="main()">
+
+  <div id="iFrameContainer" class="iframe-container">
+    <iframe id="FullScreen" class="full-screen" src="" title="Zoom"></iframe>
+    <div id="settingsPage" class="settings-Page">
+      <div id="fixedSection" class="fixed-section">
+        <button id="saveConfig">Save to Local Storage</button>
+        <button id="resetConfig">Reset to Defaults</button>
+        <button id="deleteConfig">Delete from Local Storage</button>
+        <button id="backupConfig">Backup to JSON</button>
+        <button id="restoreConfig">Restore from JSON</button>
+        <button id="importConfig">Import config.js</button>
+        <button id="exportConfig">Export config.js</button>
+      </div>
+      <h1>Weather Dashboard Setup</h1>
+      <div id="configForm">
+        <label>Current Settings Source:</label><span id="currentSettingsSource"></span>
+        <div class="section">
+          <div class="radio-group">
+            <label>Settings Source:</label>
+            <input type="radio" id="sourceLocalStorage" name="settingsSource" value="localStorage" />
+            <label for="sourceLocalStorage">Browser Local Storage</label>
+            <input type="radio" id="sourceFile" name="settingsSource" value="file" />
+            <label for="sourceFile">config.js file</label>
+          </div>
+        </div>
+        <div class="section">
+          <label for="CenterText">Top Bar Center Text:</label>
+          <input type="text" id="CenterText" />
+        </div>
+        <div class="section">
+          <label>Grid Layout:</label>
+          <label for="layout_cols">Columns:</label><input type="number" id="layout_cols" min="1" />
+          <label for="layout_rows">Rows:</label><input type="number" id="layout_rows" min="1" />
+        </div>
+        <div class="section">
+          <label>Menu Items:</label>
+          <table id="menuTable"><thead><tr><th>Color</th><th>Text</th><th>URL</th><th>Scale</th><th>Side</th><th>Actions</th></tr></thead><tbody></tbody></table>
+          <button id="addMenuItem">Add Menu Item</button>
+        </div>
+        <div class="section">
+          <label>Dashboard Items:</label>
+          <table id="dashboardTable"><thead><tr><th>Tile Title</th><th>Tile URLs</th><th>URL Rotation Interval (ms)</th><th>Actions</th></tr></thead><tbody></tbody></table>
+        </div>
+        <div class="section">
+          <label>Feed Items:</label>
+          <table id="feedTable"><thead><tr><th>Feed URL</th><th>Refresh Interval (minutes)</th><th>Actions</th></tr></thead><tbody></tbody></table>
+          <button id="addFeedItem">Add Feed Item</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="imgZoom" class="img-zoom">
+    <img class="image-large" id="ImageLarge" alt="pic" ondblclick="larger(event);" oncontextmenu="rotate(event);" />
+  </div>
+
+  <div id="myMenu"  class="menu"></div>
+  <div id="myMenuR" class="menuR"></div>
+
+  <div id="defaultFrame" class="default-frame">
+    <div class="top-bar">
+      <div id="topBarLeft"   class="child" style="justify-content:flex-start;">&nbsp;</div>
+      <div id="topBarCenter" class="child" style="justify-content:center;">&nbsp;</div>
+      <div id="topBarRight"  class="child" style="justify-content:flex-end;">&nbsp;</div>
+    </div>
+    <!-- Alerts ticker injected here by JS -->
+    <div id="dash" class="dashboard"></div>
+  </div>
+
+  <div id="overlay" class="overlay">
+    <div class="close-btn" onclick="hideOverlay()">&#10006;</div>
+    <div class="overlay-content">
+      <div><b>Menu Options:</b><div id="array1"></div></div>
+      <div><b>Image Sources:</b><div id="array2"></div></div>
+      <div><b>Feed Sources:</b><div id="array3"></div></div>
+      <div><b>Development:</b><div id="array4"></div></div>
+    </div>
+  </div>
+
+  <script>
+    /* ── Alerts Ticker ── */
+    const ALERT_FEEDS = [
+      { url:"https://www.nhc.noaa.gov/index-at.xml",                                                                       label:"HURRICANE (ATL)",   cls:"badge-hurricane" },
+      { url:"https://www.nhc.noaa.gov/index-ep.xml",                                                                       label:"HURRICANE (EPAC)",  cls:"badge-hurricane" },
+      { url:"https://api.weather.gov/alerts/active.atom?office=TBW&event=Tornado%20Warning",                               label:"TORNADO (TBW)",     cls:"badge-tornado"   },
+      { url:"https://api.weather.gov/alerts/active.atom?office=MFL&event=Tornado%20Warning",                               label:"TORNADO (MFL)",     cls:"badge-tornado"   },
+      { url:"https://api.weather.gov/alerts/active.atom?office=TBW&event=Severe%20Thunderstorm%20Warning",                 label:"SEVERE TSTM (TBW)", cls:"badge-severe"    },
+      { url:"https://api.weather.gov/alerts/active.atom?office=MFL&event=Severe%20Thunderstorm%20Warning",                 label:"SEVERE TSTM (MFL)", cls:"badge-severe"    },
+    ];
+
+    function updateAlertsSpeed() {
+      const el=document.querySelector(".alert-ticker-content");
+      if(!el) return;
+      const dur=(el.scrollWidth+el.parentElement.offsetWidth)/150;
+      el.style.setProperty("--alerts-duration",`${dur}s`);
+    }
+
+    function mountAlertsTicker() {
+      const topBar=document.querySelector("#defaultFrame .top-bar");
+      const div=document.createElement("div");
+      div.className="alert-ticker"; div.id="alert-ticker";
+      div.innerHTML=`<div class="alert-ticker-content" id="alert-ticker-content"></div>`;
+      if(topBar&&topBar.parentElement) topBar.insertAdjacentElement("afterend",div);
+      else document.body.prepend(div);
+      fetchAndDisplayAlerts();
+    }
+
+    function fetchAndDisplayAlerts() {
+      const proxy="https://corsproxy.io/";
+      const el=document.getElementById("alert-ticker-content");
+      if(!el) return;
+      const chunks=new Array(ALERT_FEEDS.length).fill("");
+
+      ALERT_FEEDS.forEach(({url,label,cls},idx)=>{
+        const fetchOne=()=>{
+          fetch(proxy+"?url="+encodeURIComponent(url))
+            .then(r=>r.text())
+            .then(txt=>{
+              const xml=new DOMParser().parseFromString(txt,"text/xml");
+              const tag=xml.querySelector("entry")?"entry":"item";
+              const items=xml.querySelectorAll(tag);
+              let out="";
+              items.forEach(item=>{
+                const title=item.querySelector("title")?.textContent||"(untitled)";
+                const lEl=item.querySelector("link");
+                const link=lEl?(lEl.getAttribute("href")||lEl.textContent||"#"):"#";
+                out+=`<span class="alert-sep">◆</span><span class="${cls}"><strong>${label}</strong></span> <a href="${link}" target="_blank">${title}</a> `;
+              });
+              chunks[idx]=out||`<span class="alert-sep">◆</span><span class="${cls}" style="opacity:0.5;">${label}: no active alerts</span> `;
+              el.innerHTML=chunks.join("");
+              updateAlertsSpeed();
+            })
+            .catch(()=>{
+              chunks[idx]=`<span class="alert-sep">◆</span><span class="${cls}" style="opacity:0.4;">${label}: —</span> `;
+              el.innerHTML=chunks.join("");
+              updateAlertsSpeed();
+            });
+        };
+        fetchOne();
+        setInterval(fetchOne,5*60*1000);
+      });
+
+      el.addEventListener("mouseenter",()=>el.style.animationPlayState="paused");
+      el.addEventListener("mouseleave",()=>el.style.animationPlayState="running");
+    }
+
+    window.addEventListener("load",()=>{ try { mountAlertsTicker(); } catch(e){ console.error(e); } });
+  </script>
+
+</body>
+</html>
