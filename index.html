@@ -647,40 +647,34 @@
     function closeLarge() {
       setRot();
       largeShow=0;
-      document.getElementById("imgZoom").style.display="none";
-      document.getElementById("imgZoom").style.zIndex=-2;
+      const z=document.getElementById("imgZoom");
+      z.style.display="none";
+      z.style.zIndex=-2;
     }
 
-    function larger(event) {
+    function openLarge(idx) {
       if(largeShow===1) { closeLarge(); return; }
-
-      // Walk up from click target to find the tile container (id="boxN")
-      let el = event.target || event.srcElement;
-      while(el && !(el.id && el.id.startsWith("box"))) el = el.parentElement;
-      if(!el) return;
-
-      const idx = +el.id.replace("box","");
       window.stop(); rotStop();
       largeShow=1;
       largeIdx=idx;
 
-      // Get the currently visible image src for this tile
-      const tileImg = document.getElementById("Image"+idx);
-      const src = tileImg ? tileImg.src : (aIMG[idx][1]||"");
+      // Read the current URL directly from aIMG using aIdx tracker
+      const currentUrl = getImgURL(aIMG[idx][aIdx[idx]]);
 
-      const largeImg = document.getElementById("ImageLarge");
-      largeImg.src = src;
-      largeImg.alt = aIMG[idx][0]||"";
+      const largeImg=document.getElementById("ImageLarge");
+      largeImg.src=""; // reset first to force reload
+      largeImg.src=currentUrl;
 
-      const titleEl = document.getElementById("imgZoomTitle");
-      if(titleEl) titleEl.textContent = aIMG[idx][0]||"";
+      const titleEl=document.getElementById("imgZoomTitle");
+      if(titleEl) titleEl.textContent=aIMG[idx][0]||"";
 
-      document.getElementById("imgZoom").style.display="flex";
-      document.getElementById("imgZoom").style.zIndex=3;
+      const z=document.getElementById("imgZoom");
+      z.style.display="flex";
+      z.style.zIndex=3;
     }
 
     // Close on Escape key
-    document.addEventListener("keydown", e => { if(e.key==="Escape" && largeShow===1) closeLarge(); });
+    document.addEventListener("keydown", e=>{ if(e.key==="Escape" && largeShow===1) closeLarge(); });
 
     function getImgURL(url) { return url.includes("?") ? url : url+"?_="+Date.now(); }
 
@@ -777,7 +771,7 @@
 
         const img=document.createElement("img"); img.id=`Image${index}`; img.classList.add("hidden");
         img.oncontextmenu=rotate;
-        wrap.onclick=larger; wrap.style.cursor='pointer';
+        wrap.onclick=(()=>{ const i=index; return ()=>openLarge(i); })(); wrap.style.cursor='pointer';
 
         const ifr=document.createElement("iframe"); ifr.className="iframe-tile"; ifr.id=`iFrame${index}`; ifr.classList.add("hidden");
 
