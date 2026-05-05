@@ -277,66 +277,8 @@
 
     .hidden { display: none !important; }
 
-    /* ─── SIDE MENUS ───────────────────────────────────────────── */
-    .menu {
-      display: grid;
-      grid-gap: 3px;
-      position: absolute;
-      height: auto;
-      width: auto;
-      margin-top: 10vh;
-      left: -5.5vw;
-      z-index: 20;
-      transition: 0.25s ease;
-    }
 
-    .menuR {
-      display: grid;
-      grid-gap: 3px;
-      position: absolute;
-      height: auto;
-      width: 28px;
-      margin-top: 10vh;
-      right: -5px;
-      z-index: 20;
-      transition: 0.25s ease;
-    }
-
-    #myMenu:hover  { width: 7vw; left: 0; }
-    #myMenuR:hover { width: 7vw; right: 0; }
-
-    #mySidenav a, #mySidenavR a {
-      display: block;
-      transition: 0.25s ease;
-      padding: 10px 14px;
-      text-decoration: none;
-      font-family: var(--font-display);
-      font-size: clamp(10px, 1.2vw, 14px);
-      letter-spacing: 0.08em;
-      color: white;
-      box-shadow: 3px 3px 10px rgba(0,0,0,0.6);
-    }
-
-    #mySidenav a {
-      position: relative;
-      float: inline-start;
-      left: calc(-0.2vw - 10px);
-      width: 5vw;
-      text-align: right;
-      border-radius: 0 4px 4px 0;
-    }
-    #mySidenav a:hover { left: 0; }
-
-    #mySidenavR a {
-      position: relative;
-      float: inline-start;
-      right: calc(-0.2vw - 10px);
-      width: 7vw;
-      text-align: left;
-      border-radius: 4px 0 0 4px;
-    }
-    #mySidenavR a:hover { right: 0; width: 7vw; }
-
+    
     /* ─── OVERLAY / SOURCES ────────────────────────────────────── */
     .overlay {
       display: none;
@@ -670,49 +612,7 @@
       else tileDelay.forEach((_,i)=>clearTimeout(aInt[i]));
     }
 
-    function MenuOpt(num) {
-      window.stop(); rotStop();
-      const opt=aURL[num][1].toLowerCase();
-      if(opt==="refresh") { location.reload(); setRot(); }
-      else if(opt==="help") { alert(help); }
-      else if(opt==="setup") {
-        document.getElementById("FullScreen").style.display="none";
-        document.getElementById("fixedSection").style.display="block";
-        document.getElementById("settingsPage").style.display="block";
-        document.getElementById("iFrameContainer").style.zIndex=1;
-        document.getElementById("iFrameContainer").style.backgroundColor="#080c10";
-        window.settings.topBarCenterText=topBarCenterText;
-        window.settings.layout_cols=window.layout_cols; window.settings.layout_rows=window.layout_rows;
-        document.getElementById("CenterText").value=window.settings.topBarCenterText;
-        document.getElementById("layout_cols").value=window.settings.layout_cols;
-        document.getElementById("layout_rows").value=window.settings.layout_rows;
-        const filtered=aURL.filter(item=>!item.some(s=>typeof s==="string"&&["BACK","Back","Refresh","Setup","Sources","Update","Help"].some(k=>s.includes(k))));
-        window.settings.aURL=filtered;
-        window.settings.aImages=aIMG.map((item,i)=>{ const[first,...rest]=item; return[first,rest,tileDelay[i]]; });
-        window.settings.aRSS=aRSS;
-        updateMenuTable(); updateFeedTable(); adjustDashboardItems();
-      } else if(opt==="sources") {
-        document.getElementById("array1").innerHTML="<br>"+formatArray(aURL)+"<br><br>";
-        document.getElementById("array2").innerHTML="<br>"+formatArray(aIMG)+"<br><br>";
-        document.getElementById("array3").innerHTML="<br>"+formatArray(aRSS)+"<br><br>";
-        document.getElementById("array4").innerHTML=`<br>Copyright (c) 2025 Pablo Sabbag, VA3HDL | MIT License<br><br>Dashboard codebase version: ${currentVersion}<br><br>`;
-        document.getElementById("overlay").style.display="block";
-      } else if(opt==="update") {
-        window.open("https://github.com/VA3HDL/hamdashboard/releases/","_blank").focus();
-      } else if(opt==="back") {
-        document.getElementById("FullScreen").src="about:blank";
-        document.getElementById("iFrameContainer").style.zIndex=-2;
-        document.getElementById("iFrameContainer").style.backgroundColor="var(--bg)";
-        document.getElementById("FullScreen").style.display="none";
-        document.getElementById("settingsPage").style.display="none";
-        setRot();
-      } else {
-        document.getElementById("iFrameContainer").style.zIndex=1;
-        document.getElementById("FullScreen").style.display="block";
-        document.getElementById("FullScreen").src=aURL[num][2];
-        document.getElementById("FullScreen").style.transform="scale("+aURL[num][3]+")";
-      }
-    }
+    function MenuOpt(num) {}
 
     function hideOverlay() { document.getElementById("overlay").style.display="none"; }
 
@@ -794,24 +694,9 @@
         alert(`Config error! aIMG:${aIMG.length}, tileDelay:${tileDelay.length}, expected:${iTiles}`);
       }
 
-      const parentDiv=document.getElementById("myMenu");
-      const parentDivR=document.getElementById("myMenuR");
 
-      aURL.unshift(
-        ["add10d","BACK","","1","L"],["add10d","BACK","","1","R"],
-        ["ff9100","Refresh","?_="+Date.now(),"1"],["0dd1a7","Help","#","1","L"]
-      );
-      if(typeof disableSetup==="undefined"||!disableSetup) aURL.push(["ff9100","Setup","#","1","R"]);
-      aURL.push(["0dd1a7","Sources","#","1","R"]);
-      if(bUpdate) aURL.push(["FF0000","Update","#","1","R"]);
+      if(typeof disableSetup==="undefined"||!disableSetup) aURL.push(["ff9100","Setup","#","1","L"]);
 
-      aURL.forEach((arr,index)=>{
-        const d=document.createElement("div");
-        const col=arr[0].replace("#","");
-        d.innerHTML=`<a href="#" style="background-color:#${col};" onclick="MenuOpt(${index})">${arr[1]}</a>`;
-        if(arr[4]==="R") { d.id="mySidenavR"; d.className="sidenavR"; parentDivR.appendChild(d); }
-        else             { d.id="mySidenav";  d.className="sidenav";  parentDiv.appendChild(d); }
-      });
 
       const dash=document.getElementById("dash");
       aIMG.forEach((arr,index)=>{
@@ -938,8 +823,6 @@
     <img class="image-large" id="ImageLarge" alt="pic" ondblclick="larger(event);" oncontextmenu="rotate(event);" />
   </div>
 
-  <div id="myMenu"  class="menu"></div>
-  <div id="myMenuR" class="menuR"></div>
 
   <div id="defaultFrame" class="default-frame">
     <div class="top-bar">
