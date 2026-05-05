@@ -568,21 +568,9 @@
       }
     }
     async function main() {
+      // Always load from config.js — ignore any stale localStorage
       try {
-        const stored=localStorage.getItem('hamdash_config');
-        if(stored) {
-          const p=JSON.parse(stored);
-          window.settingsSource=p.settingsSource;
-          if(settingsSource==='localStorage') {
-            window.disableSetup=p.disableSetup; window.topBarCenterText=p.topBarCenterText;
-            window.layout_cols=p.layout_cols; window.layout_rows=p.layout_rows;
-            window.aURL=p.aURL; window.aRSS=p.aRSS; window.aIMG=p.aImages;
-            window.tileDelay=[];
-            aIMG.forEach(sub=>{ tileDelay.push(sub.pop()); });
-            aIMG.forEach(sub=>{ if(Array.isArray(sub[1])) sub[1]=sub[1].map(e=>`${e}`).join(','); const ne=sub[1].split(','); sub.splice(1,1,...ne); });
-            window.curSettingsSrc="Browser Local Storage"; start();
-          } else loadConfig();
-        } else loadConfig();
+        loadConfig();
       } catch(e) { console.error('Config load failed:',e); }
     }
 
