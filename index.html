@@ -652,23 +652,31 @@
     }
 
     function larger(event) {
-      const t=event.target||event.srcElement;
-      if(largeShow===1) {
-        closeLarge();
-      } else {
-        window.stop(); rotStop();
-        largeShow=1;
-        largeIdx=+t.id.match(/\d+/)[0];
-        // Use the img src directly — reliable regardless of background-image
-        const largeImg=document.getElementById("ImageLarge");
-        largeImg.src=t.src;
-        largeImg.alt=aIMG[largeIdx][0]||"";
-        document.getElementById("imgZoom").style.display="flex";
-        document.getElementById("imgZoom").style.zIndex=3;
-        // Update title in overlay
-        const titleEl=document.getElementById("imgZoomTitle");
-        if(titleEl) titleEl.textContent=aIMG[largeIdx][0]||"";
-      }
+      if(largeShow===1) { closeLarge(); return; }
+
+      // Walk up from click target to find the tile container (id="boxN")
+      let el = event.target || event.srcElement;
+      while(el && !(el.id && el.id.startsWith("box"))) el = el.parentElement;
+      if(!el) return;
+
+      const idx = +el.id.replace("box","");
+      window.stop(); rotStop();
+      largeShow=1;
+      largeIdx=idx;
+
+      // Get the currently visible image src for this tile
+      const tileImg = document.getElementById("Image"+idx);
+      const src = tileImg ? tileImg.src : (aIMG[idx][1]||"");
+
+      const largeImg = document.getElementById("ImageLarge");
+      largeImg.src = src;
+      largeImg.alt = aIMG[idx][0]||"";
+
+      const titleEl = document.getElementById("imgZoomTitle");
+      if(titleEl) titleEl.textContent = aIMG[idx][0]||"";
+
+      document.getElementById("imgZoom").style.display="flex";
+      document.getElementById("imgZoom").style.zIndex=3;
     }
 
     // Close on Escape key
@@ -679,8 +687,17 @@
     function rotate(event) {
       event.preventDefault();
       const t=event.target||event.srcElement;
-      let i=largeShow===1 ? largeIdx : +t.id.match(/\d+/)[0];
-      if(aIMG[i].length>2) { ++aIdx[i]; if(aIdx[i]>aIMG[i].length-1) aIdx[i]=1; if(!isVideo(aIMG[i][aIdx[i]])&&!isFrame(aIMG[i][aIdx[i]])) document.getElementById(t.id).src=getImgURL(aIMG[i][aIdx[i]]); }
+      let i=largeShow===1 ? largeIdx : +t.id.replace("Image","");
+      if(aIMG[i] && aIMG[i].length>2) {
+        ++aIdx[i];
+        if(aIdx[i]>aIMG[i].length-1) aIdx[i]=1;
+        const nextSrc=getImgURL(aIMG[i][aIdx[i]]);
+        if(!isVideo(aIMG[i][aIdx[i]])&&!isFrame(aIMG[i][aIdx[i]])) {
+          const tileImg=document.getElementById("Image"+i);
+          if(tileImg) tileImg.src=nextSrc;
+          if(largeShow===1) document.getElementById("ImageLarge").src=nextSrc;
+        }
+      }
     }
 
     function imgRot(i) {
@@ -759,7 +776,8 @@
         const src=document.createElement("source"); vid.appendChild(src);
 
         const img=document.createElement("img"); img.id=`Image${index}`; img.classList.add("hidden");
-        img.oncontextmenu=rotate; img.onclick=larger;
+        img.oncontextmenu=rotate;
+        wrap.onclick=larger; wrap.style.cursor='pointer';
 
         const ifr=document.createElement("iframe"); ifr.className="iframe-tile"; ifr.id=`iFrame${index}`; ifr.classList.add("hidden");
 
