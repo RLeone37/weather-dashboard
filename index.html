@@ -253,7 +253,7 @@
     }
 
     .img-zoom {
-      background: var(--bg);
+      background: rgba(2,6,12,0.96);
       left: 0;
       border: none;
       height: 100%;
@@ -263,15 +263,62 @@
       bottom: 0;
       z-index: -2;
       display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
     }
+
+    .img-zoom-bar {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 20px;
+      background: linear-gradient(180deg, #0f1e2e, #091522);
+      border-bottom: 1px solid var(--border-glow);
+      flex-shrink: 0;
+    }
+
+    .img-zoom-title {
+      font-family: var(--font-display);
+      font-size: 2vh;
+      letter-spacing: 0.15em;
+      color: var(--accent-cyan);
+      text-shadow: 0 0 10px rgba(0,200,255,0.4);
+    }
+
+    .img-zoom-close {
+      font-family: var(--font-mono);
+      font-size: 1.4vh;
+      color: var(--accent-amber);
+      letter-spacing: 0.12em;
+      cursor: pointer;
+      padding: 4px 12px;
+      border: 1px solid rgba(232,160,32,0.4);
+      border-radius: 3px;
+      transition: background 0.15s;
+    }
+    .img-zoom-close:hover { background: rgba(232,160,32,0.15); }
 
     .image-large {
       display: block;
-      margin: auto;
-      max-height: 100%;
-      max-width: 100%;
-      height: 100%;
+      max-height: calc(100vh - 80px);
+      max-width: 98vw;
       width: auto;
+      height: auto;
+      object-fit: contain;
+      cursor: default;
+      border: 1px solid var(--border);
+      box-shadow: 0 0 40px rgba(0,0,0,0.8);
+    }
+
+    .img-zoom-hint {
+      font-family: var(--font-mono);
+      font-size: 1.1vh;
+      color: var(--text-dim);
+      margin-top: 10px;
+      letter-spacing: 0.06em;
     }
 
     .media {
@@ -597,11 +644,35 @@
 
     function hideOverlay() { document.getElementById("overlay").style.display="none"; }
 
+    function closeLarge() {
+      setRot();
+      largeShow=0;
+      document.getElementById("imgZoom").style.display="none";
+      document.getElementById("imgZoom").style.zIndex=-2;
+    }
+
     function larger(event) {
       const t=event.target||event.srcElement;
-      if(largeShow===1) { setRot(); largeShow=0; document.getElementById("imgZoom").style.display="none"; document.getElementById("imgZoom").style.zIndex=-2; }
-      else { window.stop(); rotStop(); largeShow=1; largeIdx=+t.id.match(/\d+/)[0]; document.getElementById("imgZoom").style.display="block"; document.getElementById("imgZoom").style.zIndex=3; document.getElementById("ImageLarge").src=t.style.backgroundImage.replace(/^url\(["']?/,"").replace(/["']?\)$/,""); }
+      if(largeShow===1) {
+        closeLarge();
+      } else {
+        window.stop(); rotStop();
+        largeShow=1;
+        largeIdx=+t.id.match(/\d+/)[0];
+        // Use the img src directly — reliable regardless of background-image
+        const largeImg=document.getElementById("ImageLarge");
+        largeImg.src=t.src;
+        largeImg.alt=aIMG[largeIdx][0]||"";
+        document.getElementById("imgZoom").style.display="flex";
+        document.getElementById("imgZoom").style.zIndex=3;
+        // Update title in overlay
+        const titleEl=document.getElementById("imgZoomTitle");
+        if(titleEl) titleEl.textContent=aIMG[largeIdx][0]||"";
+      }
     }
+
+    // Close on Escape key
+    document.addEventListener("keydown", e => { if(e.key==="Escape" && largeShow===1) closeLarge(); });
 
     function getImgURL(url) { return url.includes("?") ? url : url+"?_="+Date.now(); }
 
@@ -688,7 +759,7 @@
         const src=document.createElement("source"); vid.appendChild(src);
 
         const img=document.createElement("img"); img.id=`Image${index}`; img.classList.add("hidden");
-        img.oncontextmenu=rotate; img.ondblclick=larger;
+        img.oncontextmenu=rotate; img.onclick=larger;
 
         const ifr=document.createElement("iframe"); ifr.className="iframe-tile"; ifr.id=`iFrame${index}`; ifr.classList.add("hidden");
 
@@ -799,8 +870,13 @@
     </div>
   </div>
 
-  <div id="imgZoom" class="img-zoom">
-    <img class="image-large" id="ImageLarge" alt="pic" ondblclick="larger(event);" oncontextmenu="rotate(event);" />
+  <div id="imgZoom" class="img-zoom" onclick="closeLarge()">
+    <div class="img-zoom-bar">
+      <span id="imgZoomTitle" class="img-zoom-title"></span>
+      <span class="img-zoom-close" onclick="closeLarge()">✕ CLOSE</span>
+    </div>
+    <img class="image-large" id="ImageLarge" alt="pic" onclick="event.stopPropagation();" oncontextmenu="rotate(event);" />
+    <div class="img-zoom-hint">Click anywhere outside image or press ESC to close</div>
   </div>
 
 

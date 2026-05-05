@@ -40,7 +40,8 @@ var aIMG = [
   ],
   [
     "SE RADAR",
-    "https://radar.weather.gov/ridge/standard/KTBW_loop.gif"
+    "https://radar.weather.gov/ridge/standard/KTBW_loop.gif",
+    "https://radar.weather.gov/ridge/standard/KAMX_loop.gif"
   ],
   [
     "LIGHTNING",
@@ -101,7 +102,7 @@ var aIMG = [
 // Rotation intervals in ms — must be 12 entries to match aIMG
 var tileDelay = [
   15000,  // US Radar
-  15000,  // SE Radar
+  20000,  // SE Radar (cycles KTBW/KAMX)
   15000,  // Lightning (2 images)
   10000,  // Fire Outlook (cycles 7 days)
   15000,  // US Satellite
