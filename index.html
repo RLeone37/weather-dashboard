@@ -94,7 +94,7 @@
       display: flex;
       align-items: center;
       font-family: var(--font-mono);
-      font-size: clamp(10px, 1.3vw, 14px);
+      font-size: clamp(13px, 1.7vw, 18px);
       letter-spacing: 0.04em;
       background: transparent;
       border: none;
@@ -120,7 +120,7 @@
       position: relative;
       width: 100%;
       height: var(--alerts-h);
-      background: #020810;
+      background: #0a1520;
       overflow: hidden;
       white-space: nowrap;
       border-top: 1px solid rgba(0,200,255,0.15);
@@ -129,38 +129,19 @@
       align-items: center;
     }
 
-    /* Left label "● ALERTS" */
-    .alert-ticker::before {
-      content: '● ALERTS';
-      position: absolute;
-      left: 0;
-      z-index: 2;
-      background: #020810;
-      padding: 0 12px 0 10px;
-      font-family: var(--font-display);
-      font-size: 1.6vh;
-      color: var(--accent-amber);
-      letter-spacing: 0.15em;
-      border-right: 2px solid rgba(232,160,32,0.4);
-      height: 100%;
-      display: flex;
-      align-items: center;
-      text-shadow: 0 0 10px rgba(232,160,32,0.5);
-    }
 
     .alert-ticker-content {
       display: inline-block;
-      padding-left: 130px; /* leave room for label */
+      padding-left: 12px;
       animation: ticker var(--alerts-duration, 60s) linear infinite;
       font-family: var(--font-mono);
-      font-size: 1.6vh;
+      font-size: 1.9vh;
       font-weight: bold;
       line-height: var(--alerts-h);
       letter-spacing: 0.04em;
-      color: #ffa500;
-      text-shadow: 0 0 6px rgba(255,165,0,0.3);
+      color: #f5c842;
     }
-    .alert-ticker-content a { text-decoration: none; color: #ffa500; text-shadow: 0 0 6px rgba(255,165,0,0.3); }
+    .alert-ticker-content a { text-decoration: none; color: #f5c842; }
 
     /* ─── DASHBOARD GRID ───────────────────────────────────────── */
     .default-frame {
@@ -822,10 +803,10 @@
   <!-- ── Alerts Ticker ── -->
   <style>
     /* badge colours */
-    .badge-tornado   { color: #ff3b30; font-family: var(--font-display); font-size: 1.7vh; letter-spacing: 0.1em; text-shadow: 0 0 8px rgba(255,59,48,0.6); }
-    .badge-severe    { color: #ffa500; font-family: var(--font-display); font-size: 1.7vh; letter-spacing: 0.1em; text-shadow: 0 0 8px rgba(255,165,0,0.5); }
-    .badge-hurricane { color: #ff3b30; font-family: var(--font-display); font-size: 1.7vh; letter-spacing: 0.1em; text-shadow: 0 0 8px rgba(255,59,48,0.6); }
-    .alert-sep { color: rgba(0,200,255,0.3); margin: 0 14px; font-size: 1.4vh; }
+    .badge-tornado   { color: #ffe8e8; font-family: var(--font-display); font-size: 1.9vh; letter-spacing: 0.1em; }
+    .badge-severe    { color: #fff8c0; font-family: var(--font-display); font-size: 1.9vh; letter-spacing: 0.1em; }
+    .badge-hurricane { color: #ffe8e8; font-family: var(--font-display); font-size: 1.9vh; letter-spacing: 0.1em; }
+    .alert-sep { color: rgba(0,200,255,0.5); margin: 0 14px; font-size: 1.6vh; }
   </style>
 </head>
 
@@ -915,12 +896,12 @@
   <script>
     /* ── Alerts Ticker ── */
     const ALERT_FEEDS = [
-      { url:"https://www.nhc.noaa.gov/index-at.xml",                                                                       label:"HURRICANE (ATL)",   cls:"badge-hurricane" },
-      { url:"https://www.nhc.noaa.gov/index-ep.xml",                                                                       label:"HURRICANE (EPAC)",  cls:"badge-hurricane" },
-      { url:"https://api.weather.gov/alerts/active.atom?office=TBW&event=Tornado%20Warning",                               label:"TORNADO (TBW)",     cls:"badge-tornado"   },
-      { url:"https://api.weather.gov/alerts/active.atom?office=MFL&event=Tornado%20Warning",                               label:"TORNADO (MFL)",     cls:"badge-tornado"   },
-      { url:"https://api.weather.gov/alerts/active.atom?office=TBW&event=Severe%20Thunderstorm%20Warning",                 label:"SEVERE TSTM (TBW)", cls:"badge-severe"    },
-      { url:"https://api.weather.gov/alerts/active.atom?office=MFL&event=Severe%20Thunderstorm%20Warning",                 label:"SEVERE TSTM (MFL)", cls:"badge-severe"    },
+      { url:"https://www.nhc.noaa.gov/index-at.xml",                                                                       label:"HURRICANE (ATL)",   cls:"badge-hurricane", page:"https://www.nhc.noaa.gov/"        },
+      { url:"https://www.nhc.noaa.gov/index-ep.xml",                                                                       label:"HURRICANE (EPAC)",  cls:"badge-hurricane", page:"https://www.nhc.noaa.gov/epac.shtml" },
+      { url:"https://api.weather.gov/alerts/active.atom?office=TBW&event=Tornado%20Warning",                               label:"TORNADO (TBW)",     cls:"badge-tornado",   page:"https://www.weather.gov/tbw/"     },
+      { url:"https://api.weather.gov/alerts/active.atom?office=MFL&event=Tornado%20Warning",                               label:"TORNADO (MFL)",     cls:"badge-tornado",   page:"https://www.weather.gov/mfl/"     },
+      { url:"https://api.weather.gov/alerts/active.atom?office=TBW&event=Severe%20Thunderstorm%20Warning",                 label:"SEVERE TSTM (TBW)", cls:"badge-severe",    page:"https://www.weather.gov/tbw/"     },
+      { url:"https://api.weather.gov/alerts/active.atom?office=MFL&event=Severe%20Thunderstorm%20Warning",                 label:"SEVERE TSTM (MFL)", cls:"badge-severe",    page:"https://www.weather.gov/mfl/"     },
     ];
 
     function updateAlertsSpeed() {
@@ -946,27 +927,24 @@
       if(!el) return;
       const chunks=new Array(ALERT_FEEDS.length).fill("");
 
-      ALERT_FEEDS.forEach(({url,label,cls},idx)=>{
+      ALERT_FEEDS.forEach(({url,label,cls,page},idx)=>{
         const fetchOne=()=>{
           fetch(proxy+"?url="+encodeURIComponent(url))
             .then(r=>r.text())
             .then(txt=>{
               const xml=new DOMParser().parseFromString(txt,"text/xml");
               const tag=xml.querySelector("entry")?"entry":"item";
-              const items=xml.querySelectorAll(tag);
-              let out="";
-              items.forEach(item=>{
-                const title=item.querySelector("title")?.textContent||"(untitled)";
-                const lEl=item.querySelector("link");
-                const link=lEl?(lEl.getAttribute("href")||lEl.textContent||"#"):"#";
-                out+=`<span class="alert-sep">◆</span><span class="${cls}"><strong>${label}</strong></span> <a href="${link}" target="_blank">${title}</a> `;
-              });
-              chunks[idx]=out||`<span class="alert-sep">◆</span><span class="${cls}" style="opacity:0.5;">${label}: no active alerts</span> `;
+              const count=xml.querySelectorAll(tag).length;
+              if(count>0){
+                chunks[idx]=`<span class="alert-sep">◆</span><a href="${page}" target="_blank"><span class="${cls}"><strong>${label} (${count})</strong></span></a> `;
+              } else {
+                chunks[idx]=`<span class="alert-sep">◆</span><span class="${cls}" style="opacity:0.35;">${label}</span> `;
+              }
               el.innerHTML=chunks.join("");
               updateAlertsSpeed();
             })
             .catch(()=>{
-              chunks[idx]=`<span class="alert-sep">◆</span><span class="${cls}" style="opacity:0.4;">${label}: —</span> `;
+              chunks[idx]=`<span class="alert-sep">◆</span><span class="${cls}" style="opacity:0.25;">${label}</span> `;
               el.innerHTML=chunks.join("");
               updateAlertsSpeed();
             });
