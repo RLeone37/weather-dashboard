@@ -799,10 +799,11 @@
     setInterval(updateTopBar,1000);
     checkForUpdates();
 
-    /* ── North Port, FL current weather (NWS API) — 3 cycling displays ── */
-    let northPortDisplays=["","",""];
+    /* ── North Port, FL current weather (NWS API) — 5 cycling displays ── */
+    let northPortDisplays=["","","","",""];
     let northPortIdx=0;
     let _nwsStationId="";
+    let _prevPressurePa=null;
     async function fetchNorthPortWeather(){
       try{
         if(!_nwsStationId){
@@ -821,16 +822,18 @@
         const od=await obs.json();
         const p=od.properties;
         const dirs=["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
+        const cToF=(c)=>(c!=null)?Math.round(c*9/5+32):null;
         const mmToIn=(mm)=>(mm!=null?(mm/25.4).toFixed(2)+'"':null);
+        const DOT="  ·  ";
 
-        /* Display 1 — Conditions */
-        const tempC=p.temperature?.value;
-        const tempF=(tempC!=null)?Math.round(tempC*9/5+32):null;
+        /* Display 1 — Conditions + Heat Index */
+        const tempF=cToF(p.temperature?.value);
+        const hiF=cToF(p.heatIndex?.value);
         const desc=(p.textDescription||"").toUpperCase();
         let d1=["N.PORT FL"];
-        if(tempF!=null) d1.push(tempF+"°F");
+        if(tempF!=null) d1.push(hiF!=null?tempF+"°F / FEELS "+hiF+"°F":tempF+"°F");
         if(desc) d1.push(desc);
-        northPortDisplays[0]=d1.join("  ·  ");
+        northPortDisplays[0]=d1.join(DOT);
 
         /* Display 2 — Wind */
         const wSpd=p.windSpeed?.value;
@@ -843,7 +846,7 @@
           d2.push("WIND: "+(dir?dir+" ":"")+mph+"MPH");
         }
         if(wGust!=null) d2.push("GUSTS "+Math.round(wGust*2.237)+"MPH");
-        northPortDisplays[1]=(d2.length>1)?d2.join("  ·  "):"N.PORT FL  ·  WIND: --";
+        northPortDisplays[1]=(d2.length>1)?d2.join(DOT):"N.PORT FL"+DOT+"WIND: --";
 
         /* Display 3 — Precipitation */
         const p1h=mmToIn(p.precipitationLastHour?.value);
@@ -851,16 +854,49 @@
         let d3=["N.PORT FL"];
         if(p1h!=null) d3.push("1HR PRECIP: "+p1h);
         if(p6h!=null) d3.push("6HR: "+p6h);
-        northPortDisplays[2]=(d3.length>1)?d3.join("  ·  "):"N.PORT FL  ·  PRECIP: NONE";
+        northPortDisplays[2]=(d3.length>1)?d3.join(DOT):"N.PORT FL"+DOT+"PRECIP: NONE";
+
+        /* Display 4 — Dew Point + Barometric Pressure (with trend) */
+        const dpF=cToF(p.dewpoint?.value);
+        const pressPa=p.seaLevelPressure?.value;
+        let pressStr=null;
+        if(pressPa!=null){
+          pressStr=(pressPa/3386.39).toFixed(2)+" inHg";
+          if(_prevPressurePa!=null){
+            const diff=pressPa-_prevPressurePa;
+            pressStr+=diff>50?" ↑":diff<-50?" ↓":" →";
+          }
+          _prevPressurePa=pressPa;
+        }
+        let d4=["N.PORT FL"];
+        if(dpF!=null) d4.push("DEW PT "+dpF+"°F");
+        if(pressStr) d4.push(pressStr);
+        northPortDisplays[3]=(d4.length>1)?d4.join(DOT):"N.PORT FL"+DOT+"ATMO: --";
+
+        /* Display 5 — 24hr High/Low + Visibility */
+        const hiDay=cToF(p.maxTemperatureLast24Hours?.value);
+        const loDay=cToF(p.minTemperatureLast24Hours?.value);
+        const visM=p.visibility?.value;
+        const visMi=(visM!=null)?(Math.round(visM/1609.34*10)/10)+" MI":null;
+        let d5=["N.PORT FL"];
+        if(hiDay!=null||loDay!=null){
+          let hl="24HR: ";
+          if(hiDay!=null) hl+="H "+hiDay+"°F";
+          if(hiDay!=null&&loDay!=null) hl+=" / ";
+          if(loDay!=null) hl+="L "+loDay+"°F";
+          d5.push(hl);
+        }
+        if(visMi!=null) d5.push("VIS "+visMi);
+        northPortDisplays[4]=(d5.length>1)?d5.join(DOT):"N.PORT FL"+DOT+"H/L: --";
 
       }catch(e){
         console.warn("North Port weather fetch failed:",e);
-        if(!northPortDisplays[0]) northPortDisplays=["N.PORT FL: --","N.PORT FL: --","N.PORT FL: --"];
+        if(!northPortDisplays[0]) northPortDisplays=Array(5).fill("N.PORT FL: --");
       }
     }
     fetchNorthPortWeather();
     setInterval(fetchNorthPortWeather,10*60*1000);
-    setInterval(()=>{northPortIdx=(northPortIdx+1)%3;},6000);
+    setInterval(()=>{northPortIdx=(northPortIdx+1)%northPortDisplays.length;},8000);
   </script>
 
   <!-- ── Alerts Ticker ── -->
