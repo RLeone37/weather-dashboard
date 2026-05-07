@@ -828,6 +828,7 @@
     /* ── North Port, FL current weather (NWS API) ── */
     let northPortWeatherStr="";
     let _nwsStationId="";
+    let _nwsForecastUrl="";
     let _prevPressurePa=null;
     async function fetchNorthPortWeather(){
       try{
@@ -835,21 +836,34 @@
           const pt=await fetch("https://api.weather.gov/points/27.0442,-82.2359",
             {headers:{"Accept":"application/geo+json","User-Agent":"WeatherDashboard"}});
           const ptd=await pt.json();
+          _nwsForecastUrl=ptd.properties.forecast;
           const st=await fetch(ptd.properties.observationStations,
             {headers:{"Accept":"application/geo+json","User-Agent":"WeatherDashboard"}});
           const std=await st.json();
           _nwsStationId=std.features[0].properties.stationIdentifier;
         }
-        const obs=await fetch(
-          "https://api.weather.gov/stations/"+_nwsStationId+"/observations/latest",
-          {headers:{"Accept":"application/geo+json","User-Agent":"WeatherDashboard"}}
-        );
-        const od=await obs.json();
+        const hdrs={headers:{"Accept":"application/geo+json","User-Agent":"WeatherDashboard"}};
+        const [obsRes,fcstRes]=await Promise.all([
+          fetch("https://api.weather.gov/stations/"+_nwsStationId+"/observations/latest",hdrs),
+          _nwsForecastUrl?fetch(_nwsForecastUrl,hdrs):Promise.resolve(null)
+        ]);
+        const od=await obsRes.json();
         const p=od.properties;
         const dirs=["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
         const cToF=(c)=>(c!=null)?Math.round(c*9/5+32):null;
-        const mmToIn=(mm)=>(mm!=null?(mm/25.4).toFixed(2)+'"':null);
+        const inStr=(mm)=>(mm!=null?(mm/25.4).toFixed(2)+'"':"0.00\"");
         const S='<span class="wx-sep">◆</span>';
+
+        /* High/low from forecast — more reliable than observation field */
+        let hiDay=null,loDay=null;
+        if(fcstRes&&fcstRes.ok){
+          const fd=await fcstRes.json();
+          const periods=fd.properties?.periods||[];
+          const dayP=periods.find(pp=>pp.isDaytime);
+          const nightP=periods.find(pp=>!pp.isDaytime);
+          if(dayP) hiDay=dayP.temperature;
+          if(nightP) loDay=nightP.temperature;
+        }
 
         const tempF=cToF(p.temperature?.value);
         const hiF=cToF(p.heatIndex?.value);
@@ -858,11 +872,10 @@
         const wDir=p.windDirection?.value;
         const wGust=p.windGust?.value;
         const dpF=cToF(p.dewpoint?.value);
-        const pressPa=p.seaLevelPressure?.value;
-        const p1h=mmToIn(p.precipitationLastHour?.value);
-        const p6h=mmToIn(p.precipitationLast6Hours?.value);
-        const hiDay=cToF(p.maxTemperatureLast24Hours?.value);
-        const loDay=cToF(p.minTemperatureLast24Hours?.value);
+        /* fall back to barometricPressure if seaLevelPressure is null */
+        const pressPa=p.seaLevelPressure?.value??p.barometricPressure?.value;
+        const p1h=p.precipitationLastHour?.value;
+        const p6h=p.precipitationLast6Hours?.value;
         const visM=p.visibility?.value;
 
         let parts=["<strong>N.PORT FL</strong>"];
@@ -887,15 +900,11 @@
           parts.push(ps);
         }
 
-        if(p1h!=null||p6h!=null){
-          let pr="PRECIP:";
-          if(p1h!=null) pr+=" 1HR "+p1h;
-          if(p6h!=null) pr+="  6HR "+p6h;
-          parts.push(pr);
-        }
+        /* always show precip — 0.00" when no rain reported */
+        parts.push("PRECIP: 1HR "+inStr(p1h)+"  6HR "+inStr(p6h));
 
         if(hiDay!=null||loDay!=null){
-          let hl="24HR:";
+          let hl="TODAY:";
           if(hiDay!=null) hl+=" H "+hiDay+"°F";
           if(hiDay!=null&&loDay!=null) hl+=" /";
           if(loDay!=null) hl+=" L "+loDay+"°F";
