@@ -861,7 +861,7 @@
         const cToF=(c)=>(c!=null)?Math.round(c*9/5+32):null;
         const inStr=(mm)=>(mm!=null?(mm/25.4).toFixed(2)+'"':"0.00\"");
         const S=' <span class="wx-sep">◆</span> ';
-        const LBL="<strong>N.PORT FL</strong>";
+        const LBL="<strong>NORTH PORT FL</strong>";
 
         let hiDay=null,loDay=null;
         if(fcstRes&&fcstRes.ok){
@@ -885,33 +885,32 @@
         const p6h=p.precipitationLast6Hours?.value;
         const visM=p.visibility?.value;
 
-        /* Group 1 — Conditions: temp, feels like, sky, dew point */
+        /* Group 1 — Temperature & Sky: temp, feels like, condition, dew point */
         let g1=[LBL];
         if(tempF!=null) g1.push(hiF!=null?tempF+"°F / FEELS "+hiF+"°F":tempF+"°F");
         if(desc) g1.push(desc);
         if(dpF!=null) g1.push("DEW PT "+dpF+"°F");
         northPortGroups[0]=g1.join(S);
 
-        /* Group 2 — Wind & Pressure: wind dir/speed/gusts, pressure, visibility */
+        /* Group 2 — Wind & Visibility: direction, speed, gusts, visibility */
         let g2=[LBL];
         if(wSpd!=null){
           const mph=Math.round(wSpd*2.237);
           const dir=(wDir!=null)?dirs[Math.round(wDir/22.5)%16]:"";
-          let ws="WIND: "+(dir?dir+" ":"")+mph+"MPH";
-          if(wGust!=null) ws+="  GUSTS "+Math.round(wGust*2.237)+"MPH";
-          g2.push(ws);
+          g2.push("WIND: "+(dir?dir+" ":"")+mph+"MPH");
         }
+        g2.push("GUSTS: "+(wGust!=null?Math.round(wGust*2.237)+"MPH":"--"));
+        if(visM!=null) g2.push("VIS "+(Math.round(visM/1609.34*10)/10)+" MI");
+        northPortGroups[1]=g2.join(S);
+
+        /* Group 3 — Atmosphere & Forecast: pressure, precip, today high/low */
+        let g3=[LBL];
         if(pressPa!=null){
           let ps=(pressPa/3386.39).toFixed(2)+" inHg";
           if(_prevPressurePa!=null){const d=pressPa-_prevPressurePa; ps+=d>50?" ↑":d<-50?" ↓":" →";}
           _prevPressurePa=pressPa;
-          g2.push(ps);
+          g3.push(ps);
         }
-        if(visM!=null) g2.push("VIS "+(Math.round(visM/1609.34*10)/10)+" MI");
-        northPortGroups[1]=g2.join(S);
-
-        /* Group 3 — Precip & Forecast: 1hr/6hr precip, today high/low */
-        let g3=[LBL];
         g3.push("PRECIP: 1HR "+inStr(p1h)+"  6HR "+inStr(p6h));
         if(hiDay!=null||loDay!=null){
           let hl="TODAY:";
