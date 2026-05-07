@@ -794,10 +794,55 @@
       document.getElementById("topBarLeft").textContent=
         days[now.getDay()]+" "+month+"/"+day+"/"+year+" — "+timeStr;
       document.getElementById("topBarCenter").textContent=topBarCenterText;
-      document.getElementById("topBarRight").textContent="";
+      document.getElementById("topBarRight").textContent=northPortWeather;
     }
     setInterval(updateTopBar,1000);
     checkForUpdates();
+
+    /* ── North Port, FL current weather (NWS API) ── */
+    let northPortWeather="";
+    let _nwsStationId="";
+    async function fetchNorthPortWeather(){
+      try{
+        if(!_nwsStationId){
+          const pt=await fetch("https://api.weather.gov/points/27.0442,-82.2359",
+            {headers:{"Accept":"application/geo+json","User-Agent":"WeatherDashboard"}});
+          const ptd=await pt.json();
+          const st=await fetch(ptd.properties.observationStations,
+            {headers:{"Accept":"application/geo+json","User-Agent":"WeatherDashboard"}});
+          const std=await st.json();
+          _nwsStationId=std.features[0].properties.stationIdentifier;
+        }
+        const obs=await fetch(
+          "https://api.weather.gov/stations/"+_nwsStationId+"/observations/latest",
+          {headers:{"Accept":"application/geo+json","User-Agent":"WeatherDashboard"}}
+        );
+        const od=await obs.json();
+        const p=od.properties;
+        const tempC=p.temperature?.value;
+        const tempF=(tempC!=null)?Math.round(tempC*9/5+32):null;
+        const desc=(p.textDescription||"").toUpperCase();
+        const rh=p.relativeHumidity?.value;
+        const wSpd=p.windSpeed?.value;
+        const wDir=p.windDirection?.value;
+        const dirs=["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
+        let parts=["N.PORT FL"];
+        if(tempF!=null) parts.push(tempF+"°F");
+        if(desc) parts.push(desc);
+        if(rh!=null) parts.push(Math.round(rh)+"%RH");
+        if(wSpd!=null){
+          const mph=Math.round(wSpd*2.237);
+          const dir=(wDir!=null)?dirs[Math.round(wDir/22.5)%16]:"";
+          parts.push(dir?dir+" "+mph+"MPH":mph+"MPH");
+        }
+        northPortWeather=parts.join("  ·  ");
+      }catch(e){
+        console.warn("North Port weather fetch failed:",e);
+        if(!northPortWeather) northPortWeather="N.PORT FL: --";
+      }
+    }
+    fetchNorthPortWeather();
+    setInterval(fetchNorthPortWeather,10*60*1000);
   </script>
 
   <!-- ── Alerts Ticker ── -->
