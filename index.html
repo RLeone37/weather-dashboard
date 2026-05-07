@@ -33,8 +33,9 @@
       --font-cond:    'Roboto Condensed', sans-serif;
       --font-display: 'Bebas Neue', sans-serif;
       --topbar-h:     36px;
+      --weather-h:    34px;
       --alerts-h:     38px;
-      --header-total: 76px; /* topbar + alerts + 2px gap */
+      --header-total: 110px; /* topbar + weatherbar + alerts + gaps */
       --main-layout:  auto auto auto auto;
       --main-width:   24.9vw;
       --main-height:  31vh;
@@ -114,6 +115,30 @@
       text-shadow: 0 0 12px rgba(0,255,136,0.5), 0 0 30px rgba(0,255,136,0.2);
     }
     #topBarRight { color: var(--accent-cyan); justify-content: flex-end; opacity: 0.85; }
+
+    /* ─── WEATHER BAR ─────────────────────────────────────────── */
+    .weather-bar {
+      height: var(--weather-h);
+      background: linear-gradient(180deg, #091522 0%, #060e17 100%);
+      border-bottom: 1px solid rgba(0,200,255,0.18);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 12px;
+      overflow: hidden;
+      position: relative;
+      z-index: 10;
+    }
+    #weatherBarContent {
+      font-family: var(--font-mono);
+      font-size: clamp(11px, 1.35vw, 14px);
+      color: var(--accent-cyan);
+      letter-spacing: 0.05em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .wx-sep { color: rgba(0,200,255,0.4); margin: 0 6px; }
 
     /* ─── ALERTS TICKER ────────────────────────────────────────── */
     .alert-ticker {
@@ -726,7 +751,7 @@
       document.documentElement.style.setProperty("--main-width",(99.6/lc)+"vw");
 
       /* Height calc: subtract header (topbar + alerts + gaps) */
-      const hdrPx = 76; /* ~36px topbar + 38px alerts + 2px */
+      const hdrPx = 110; /* 36px topbar + 34px weatherbar + 38px alerts + gaps */
       document.documentElement.style.setProperty("--main-height",`calc((100vh - ${hdrPx}px - ${(lr+1)*2}px) / ${lr})`);
 
       document.getElementById("currentSettingsSource").innerHTML=curSettingsSrc;
@@ -791,17 +816,17 @@
       const day=now.getDate();
       const year=now.getFullYear();
       const timeStr=now.toLocaleTimeString("en-US",{hour12:false,hour:"2-digit",minute:"2-digit",second:"2-digit",timeZoneName:"short"});
-      document.getElementById("topBarLeft").textContent=
-        days[now.getDay()]+" "+month+"/"+day+"/"+year+" — "+timeStr;
+      document.getElementById("topBarLeft").textContent=days[now.getDay()]+"  "+month+"/"+day+"/"+year;
       document.getElementById("topBarCenter").textContent=topBarCenterText;
-      document.getElementById("topBarRight").textContent=northPortDisplays[northPortIdx]||"";
+      document.getElementById("topBarRight").textContent=timeStr;
+      const wb=document.getElementById("weatherBarContent");
+      if(wb) wb.innerHTML=northPortWeatherStr||"";
     }
     setInterval(updateTopBar,1000);
     checkForUpdates();
 
-    /* ── North Port, FL current weather (NWS API) — 5 cycling displays ── */
-    let northPortDisplays=["","","","",""];
-    let northPortIdx=0;
+    /* ── North Port, FL current weather (NWS API) ── */
+    let northPortWeatherStr="";
     let _nwsStationId="";
     let _prevPressurePa=null;
     async function fetchNorthPortWeather(){
@@ -824,79 +849,69 @@
         const dirs=["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
         const cToF=(c)=>(c!=null)?Math.round(c*9/5+32):null;
         const mmToIn=(mm)=>(mm!=null?(mm/25.4).toFixed(2)+'"':null);
-        const DOT="  ·  ";
+        const S='<span class="wx-sep">◆</span>';
 
-        /* Display 1 — Conditions + Heat Index */
         const tempF=cToF(p.temperature?.value);
         const hiF=cToF(p.heatIndex?.value);
         const desc=(p.textDescription||"").toUpperCase();
-        let d1=["N.PORT FL"];
-        if(tempF!=null) d1.push(hiF!=null?tempF+"°F / FEELS "+hiF+"°F":tempF+"°F");
-        if(desc) d1.push(desc);
-        northPortDisplays[0]=d1.join(DOT);
-
-        /* Display 2 — Wind */
         const wSpd=p.windSpeed?.value;
         const wDir=p.windDirection?.value;
         const wGust=p.windGust?.value;
-        let d2=["N.PORT FL"];
-        if(wSpd!=null){
-          const mph=Math.round(wSpd*2.237);
-          const dir=(wDir!=null)?dirs[Math.round(wDir/22.5)%16]:"";
-          d2.push("WIND: "+(dir?dir+" ":"")+mph+"MPH");
-        }
-        if(wGust!=null) d2.push("GUSTS "+Math.round(wGust*2.237)+"MPH");
-        northPortDisplays[1]=(d2.length>1)?d2.join(DOT):"N.PORT FL"+DOT+"WIND: --";
-
-        /* Display 3 — Precipitation */
-        const p1h=mmToIn(p.precipitationLastHour?.value);
-        const p6h=mmToIn(p.precipitationLast6Hours?.value);
-        let d3=["N.PORT FL"];
-        if(p1h!=null) d3.push("1HR PRECIP: "+p1h);
-        if(p6h!=null) d3.push("6HR: "+p6h);
-        northPortDisplays[2]=(d3.length>1)?d3.join(DOT):"N.PORT FL"+DOT+"PRECIP: NONE";
-
-        /* Display 4 — Dew Point + Barometric Pressure (with trend) */
         const dpF=cToF(p.dewpoint?.value);
         const pressPa=p.seaLevelPressure?.value;
-        let pressStr=null;
-        if(pressPa!=null){
-          pressStr=(pressPa/3386.39).toFixed(2)+" inHg";
-          if(_prevPressurePa!=null){
-            const diff=pressPa-_prevPressurePa;
-            pressStr+=diff>50?" ↑":diff<-50?" ↓":" →";
-          }
-          _prevPressurePa=pressPa;
-        }
-        let d4=["N.PORT FL"];
-        if(dpF!=null) d4.push("DEW PT "+dpF+"°F");
-        if(pressStr) d4.push(pressStr);
-        northPortDisplays[3]=(d4.length>1)?d4.join(DOT):"N.PORT FL"+DOT+"ATMO: --";
-
-        /* Display 5 — 24hr High/Low + Visibility */
+        const p1h=mmToIn(p.precipitationLastHour?.value);
+        const p6h=mmToIn(p.precipitationLast6Hours?.value);
         const hiDay=cToF(p.maxTemperatureLast24Hours?.value);
         const loDay=cToF(p.minTemperatureLast24Hours?.value);
         const visM=p.visibility?.value;
-        const visMi=(visM!=null)?(Math.round(visM/1609.34*10)/10)+" MI":null;
-        let d5=["N.PORT FL"];
-        if(hiDay!=null||loDay!=null){
-          let hl="24HR: ";
-          if(hiDay!=null) hl+="H "+hiDay+"°F";
-          if(hiDay!=null&&loDay!=null) hl+=" / ";
-          if(loDay!=null) hl+="L "+loDay+"°F";
-          d5.push(hl);
-        }
-        if(visMi!=null) d5.push("VIS "+visMi);
-        northPortDisplays[4]=(d5.length>1)?d5.join(DOT):"N.PORT FL"+DOT+"H/L: --";
 
+        let parts=["<strong>N.PORT FL</strong>"];
+
+        if(tempF!=null) parts.push(hiF!=null?tempF+"°F / FEELS "+hiF+"°F":tempF+"°F");
+        if(desc) parts.push(desc);
+
+        if(wSpd!=null){
+          const mph=Math.round(wSpd*2.237);
+          const dir=(wDir!=null)?dirs[Math.round(wDir/22.5)%16]:"";
+          let ws="WIND: "+(dir?dir+" ":"")+mph+"MPH";
+          if(wGust!=null) ws+="  GUSTS "+Math.round(wGust*2.237)+"MPH";
+          parts.push(ws);
+        }
+
+        if(dpF!=null) parts.push("DEW PT "+dpF+"°F");
+
+        if(pressPa!=null){
+          let ps=(pressPa/3386.39).toFixed(2)+" inHg";
+          if(_prevPressurePa!=null){const d=pressPa-_prevPressurePa; ps+=d>50?" ↑":d<-50?" ↓":" →";}
+          _prevPressurePa=pressPa;
+          parts.push(ps);
+        }
+
+        if(p1h!=null||p6h!=null){
+          let pr="PRECIP:";
+          if(p1h!=null) pr+=" 1HR "+p1h;
+          if(p6h!=null) pr+="  6HR "+p6h;
+          parts.push(pr);
+        }
+
+        if(hiDay!=null||loDay!=null){
+          let hl="24HR:";
+          if(hiDay!=null) hl+=" H "+hiDay+"°F";
+          if(hiDay!=null&&loDay!=null) hl+=" /";
+          if(loDay!=null) hl+=" L "+loDay+"°F";
+          parts.push(hl);
+        }
+
+        if(visM!=null) parts.push("VIS "+(Math.round(visM/1609.34*10)/10)+" MI");
+
+        northPortWeatherStr=parts.join(" "+S+" ");
       }catch(e){
         console.warn("North Port weather fetch failed:",e);
-        if(!northPortDisplays[0]) northPortDisplays=Array(5).fill("N.PORT FL: --");
+        if(!northPortWeatherStr) northPortWeatherStr="N.PORT FL: --";
       }
     }
     fetchNorthPortWeather();
     setInterval(fetchNorthPortWeather,10*60*1000);
-    setInterval(()=>{northPortIdx=(northPortIdx+1)%northPortDisplays.length;},8000);
   </script>
 
   <!-- ── Alerts Ticker ── -->
@@ -978,6 +993,7 @@
       <div id="topBarCenter" class="child" style="justify-content:center;">&nbsp;</div>
       <div id="topBarRight"  class="child" style="justify-content:flex-end;">&nbsp;</div>
     </div>
+    <div id="weatherBar" class="weather-bar"><span id="weatherBarContent"></span></div>
     <!-- Alerts ticker injected here by JS -->
     <div id="dash" class="dashboard"></div>
   </div>
@@ -1011,11 +1027,11 @@
     }
 
     function mountAlertsTicker() {
-      const topBar=document.querySelector("#defaultFrame .top-bar");
+      const weatherBar=document.getElementById("weatherBar");
       const div=document.createElement("div");
       div.className="alert-ticker"; div.id="alert-ticker";
       div.innerHTML=`<div class="alert-ticker-content" id="alert-ticker-content"></div>`;
-      if(topBar&&topBar.parentElement) topBar.insertAdjacentElement("afterend",div);
+      if(weatherBar&&weatherBar.parentElement) weatherBar.insertAdjacentElement("afterend",div);
       else document.body.prepend(div);
       fetchAndDisplayAlerts();
     }
