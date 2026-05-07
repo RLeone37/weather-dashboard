@@ -1030,8 +1030,8 @@
   <script>
     /* ── Alerts Ticker ── */
     const ALERT_FEEDS = [
-      { url:"https://www.nhc.noaa.gov/index-at.xml",                                                                       label:"HURRICANE (ATL)",   cls:"badge-hurricane", page:"https://www.nhc.noaa.gov/"        },
-      { url:"https://www.nhc.noaa.gov/index-ep.xml",                                                                       label:"HURRICANE (EPAC)",  cls:"badge-hurricane", page:"https://www.nhc.noaa.gov/epac.shtml" },
+      { url:"https://www.nhc.noaa.gov/index-at.xml",                                                                       label:"HURRICANE (ATL)",   cls:"badge-hurricane", page:"https://www.nhc.noaa.gov/",           titleFilter:/advisory/i },
+      { url:"https://www.nhc.noaa.gov/index-ep.xml",                                                                       label:"HURRICANE (EPAC)",  cls:"badge-hurricane", page:"https://www.nhc.noaa.gov/epac.shtml", titleFilter:/advisory/i },
       { url:"https://api.weather.gov/alerts/active.atom?office=TBW&event=Tornado%20Warning",                               label:"TORNADO (TBW)",     cls:"badge-tornado",   page:"https://www.weather.gov/tbw/"     },
       { url:"https://api.weather.gov/alerts/active.atom?office=MFL&event=Tornado%20Warning",                               label:"TORNADO (MFL)",     cls:"badge-tornado",   page:"https://www.weather.gov/mfl/"     },
       { url:"https://api.weather.gov/alerts/active.atom?office=TBW&event=Severe%20Thunderstorm%20Warning",                 label:"SEVERE TSTM (TBW)", cls:"badge-severe",    page:"https://www.weather.gov/tbw/"     },
@@ -1061,14 +1061,17 @@
       if(!el) return;
       const chunks=new Array(ALERT_FEEDS.length).fill("");
 
-      ALERT_FEEDS.forEach(({url,label,cls,page},idx)=>{
+      ALERT_FEEDS.forEach(({url,label,cls,page,titleFilter},idx)=>{
         const fetchOne=()=>{
           fetch(proxy+"?url="+encodeURIComponent(url))
             .then(r=>r.text())
             .then(txt=>{
               const xml=new DOMParser().parseFromString(txt,"text/xml");
               const tag=xml.querySelector("entry")?"entry":"item";
-              const count=xml.querySelectorAll(tag).length;
+              const entries=[...xml.querySelectorAll(tag)];
+              const count=titleFilter
+                ? entries.filter(e=>titleFilter.test(e.querySelector("title")?.textContent||"")).length
+                : entries.length;
               if(count>0){
                 chunks[idx]=`<span class="alert-sep">◆</span><a href="${page}" target="_blank"><span class="${cls}"><strong>${label} (${count})</strong></span></a> `;
               } else {
